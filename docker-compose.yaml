@@ -1,0 +1,11 @@
+version: '3'
+services:
+  platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - /Users/v3nom/workspace/tekenlight/product/build:/build
+    working_dir: /build
+    command: sleep infinity
