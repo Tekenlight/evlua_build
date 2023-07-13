@@ -31,7 +31,7 @@ function build_foundation() {
         DIRECTORY_NAME=$(echo "$MODULE" | awk -F/ '{print $(NF)}')
         echo "Directory name: $DIRECTORY_NAME"
         if [ "$DIRECTORY_NAME" == "evpoco" ] || [ "$DIRECTORY_NAME" == "lua" ]; then
-            echo "skipping evpoco..."
+            echo "skipping evpoco/lua..."
         elif [ "$DIRECTORY_NAME" == "lua-5-3-5-build" ]; then
             echo "========== Installing: $DIRECTORY_NAME =========="
             cd $MODULE
@@ -44,19 +44,8 @@ function build_foundation() {
                 echo "Building lua for linux"
                 make linux
             fi
-            make install INSTALL_TOP=$INSTALL_DIRECTORY/usr
-            ## copy the lua related files to /usr
-            cp $INSTALL_DIRECTORY/usr/bin/lua /usr/bin/
-            cp $INSTALL_DIRECTORY/usr/bin/luac /usr/bin/
-            cp $INSTALL_DIRECTORY/usr/include/lua.h /usr/include/
-            cp $INSTALL_DIRECTORY/usr/include/luaconf.h /usr/include/
-            cp $INSTALL_DIRECTORY/usr/include/lualib.h /usr/include/
-            cp $INSTALL_DIRECTORY/usr/include/lauxlib.h /usr/include/
-            cp $INSTALL_DIRECTORY/usr/include/lua.hpp /usr/include/
-            cp $INSTALL_DIRECTORY/usr/lib/liblua.a /usr/lib/
-            mkdir -p /usr/man/man1
-            cp $INSTALL_DIRECTORY/usr/man/man1/lua.1 /usr/man/man1/
-            cp $INSTALL_DIRECTORY/usr/man/man1/luac.1 /usr/man/man1/
+            mkdir -p $LUA_INSTALLATION_DIR
+            make install INSTALL_TOP=$LUA_INSTALLATION_DIR
             echo "========== Done =========="
         elif [ "$DIRECTORY_NAME" == "libev" ] || [ "$DIRECTORY_NAME" == "libxml2" ]; then
             echo "========== Installing: $DIRECTORY_NAME =========="
@@ -91,7 +80,7 @@ function build_foundation() {
 }
 
 function install_luarocks_if_not_already() {
-    if check_if_installed "luarocks"; then
+    if check_if_directory_is_not_empty "$LUAROCKS_INSTALLATION_DIR"; then
         echo "luarocks already installed..."
     else
         echo "luarocks not installed..."
@@ -102,7 +91,8 @@ function install_luarocks_if_not_already() {
             tar xvzf luarocks-3.8.0.tar.gz
         fi
         cd luarocks-3.8.0
-        ./configure
+        mkdir -p $LUAROCKS_INSTALLATION_DIR
+        ./configure  --prefix=$LUAROCKS_INSTALLATION_DIR --rocks-tree=$LUAROCKS_ROOT_INSTALLATION_DIR --with-lua=$LUA_INSTALLATION_DIR
         make
         make install
     fi
@@ -149,10 +139,10 @@ function install_evpoco() {
     cd $EVPOCO_BUILD_DIRECTORY
     if [ "$SYSTEM_TYPE" == "arm64" ]; then
         echo "Building system for macosx"
-        cmake -DPG_BUILD_PATH=$BASE_PATH"postgresql" -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIRECTORY/usr -DTARGET_OS_OSX_HOMEBREW=1 -DCMAKE_OSX_ARCHITECTURES="arm64" $REPO_DIRECTORY/evpoco/.
+        cmake -DPG_BUILD_PATH=$POSTGRES_INSTALL_DIRECTORY -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIRECTORY/usr -DLUA_INSTALL_DIR=$LUA_INSTALLATION_DIR -DTARGET_OS_OSX_HOMEBREW=1 -DCMAKE_OSX_ARCHITECTURES="arm64" $REPO_DIRECTORY/evpoco/.
     else
         echo "Building system for ubuntu"
-        cmake -DPG_BUILD_PATH=$BASE_PATH"postgresql" -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIRECTORY/usr $REPO_DIRECTORY/evpoco/.
+        cmake -DPG_BUILD_PATH=$POSTGRES_INSTALL_DIRECTORY -DCMAKE_INSTALL_PREFIX:PATH=$INSTALL_DIRECTORY/usr -DLUA_INSTALL_DIR=$LUA_INSTALLATION_DIR $REPO_DIRECTORY/evpoco/.
     fi
     cmake --build .
     make install
@@ -160,7 +150,7 @@ function install_evpoco() {
 
 function build_evlua() {
     echo "clean .luarocks if exists"
-    rm -r ~/.luarocks
+    rm -r $LUAROCKS_ROOT_INSTALLATION_DIR
 
     # list all the clone directory and build cmake files
     for MODULE in "$EVLUA_REPO_DIRECTORY"/*; do
@@ -172,14 +162,18 @@ function build_evlua() {
         if [ $DIRECTORY_NAME == "service_utils" ]; then
             cd $MODULE
             cd ../lua-uri
-            luarocks make --local
+            $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
         elif [ lua-uri ]; then
             echo "lua-uri will be installed at the time of service utils installation"
         fi
         cd $MODULE
-        luarocks make --local
+        $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
         echo "========== Done =========="
     done
+}
+
+function copy_evlua_libraries() {
+    cp -r $LUAROCKS_ROOT_INSTALLATION_DIR/* $INSTALL_DIRECTORY/usr
 }
 
 function build_executable() {
@@ -196,4 +190,4 @@ function build_executable() {
     fi
 }
 
-clone_libraries foundation; build_foundation; install_luarocks_if_not_already; install_postgres_if_not_already; install_evpoco; clone_libraries evlua; build_evlua; build_executable
+clone_libraries foundation; build_foundation; install_luarocks_if_not_already; install_postgres_if_not_already; install_evpoco; clone_libraries evlua; build_evlua; copy_evlua_libraries; build_executable

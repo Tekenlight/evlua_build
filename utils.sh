@@ -22,10 +22,15 @@ clone_repo() {
     if check_if_directory_is_not_empty "$REPO_CLONE_DIRECTORY" ; then
         echo "$REPO_CLONE_DIRECTORY already exists, checking for update if any..."
         cd $REPO_CLONE_DIRECTORY
-        GIT_SSH_COMMAND="ssh -i $SSH_KEY_PATH" git pull
+        git pull
     else
         mkdir -p $REPO_CLONE_DIRECTORY
-        git clone $REPO_URL $REPO_CLONE_DIRECTORY
+        # git clone $REPO_URL $REPO_CLONE_DIRECTORY
+        if [ "$REPO_CLONE_DIRECTORY" == "/build/platform/repos/evpoco" ]; then
+            git clone -b lualib_cmake_changes $REPO_URL $REPO_CLONE_DIRECTORY
+        else
+            git clone $REPO_URL $REPO_CLONE_DIRECTORY
+        fi
     fi
 }
 
@@ -35,15 +40,6 @@ configure_and_make() {
     echo "use python: $use_python and type: $type"
     # Run the autoreconf -i command and capture the output
     autoreconf -i
-    # output=$(autoreconf -i 2>&1)
-
-    # # Check the return code to determine if the command executed successfully
-    # if [ $? -eq 0 ]; then
-    #     echo "Command executed successfully."
-    # else
-    #     echo "Command failed. trying again"
-    #     autoreconf -i
-    # fi
     if [ use_python == true ]; then
         echo "configuring $type with python"
         ./configure --prefix=$INSTALL_DIRECTORY/usr --exec-prefix=$INSTALL_DIRECTORY/usr

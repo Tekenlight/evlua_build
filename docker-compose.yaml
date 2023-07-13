@@ -6,6 +6,6 @@ services:
       dockerfile: Dockerfile
     restart: always
     volumes:
-      - /Users/v3nom/workspace/tekenlight/product/build:/build
+      - /Users/v3nom/workspace/tekenlight/product/evlua_build:/build
     working_dir: /build
     command: sleep infinity
