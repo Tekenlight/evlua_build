@@ -1,0 +1,27 @@
+name: EVLUA
+on:
+  workflow_dispatch
+
+env:
+  BASE_PATH: evlua_build
+
+jobs:
+  build_evlua:
+    name: build evlua
+    runs-on: ubuntu-latest
+    steps:
+      - name: install apt dependencies
+        run: |
+          apt-get update
+          apt install -y zlib1g
+          apt-get install -y zlib1g-dev cmake g++ build-essential clang liblzma-dev libssl-dev libreadline-dev autoconf libtool libsqlite3-dev wget zip pkg-config 
+      - name: checkout evlua_build
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/evlua_build
+          path: evlua_build
+     - name: trigger build
+        run: |
+          cd evlua_build
+          sh run.sh
+          tail -f build_output.log
