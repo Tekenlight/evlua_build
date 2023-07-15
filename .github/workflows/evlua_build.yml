@@ -2,6 +2,9 @@ name: EVLUA
 on:
   workflow_dispatch
 
+env:
+  BASE_PATH: evlua_build
+
 jobs:
   build_evlua:
     name: build evlua
@@ -12,38 +15,13 @@ jobs:
           apt-get update
           apt install -y zlib1g
           apt-get install -y zlib1g-dev cmake g++ build-essential clang liblzma-dev libssl-dev libreadline-dev autoconf libtool libsqlite3-dev wget zip pkg-config 
-      - name: checkout efio
+      - name: checkout evlua_build
         uses : actions/checkout@v3
         with :
-          repository: Tekenlight/efio
-          path: efio
-      - name: checkout lua-5-3-5
-        uses : actions/checkout@v3
-        with :
-          repository: Tekenlight/lua-5-3-5-build
-          path: lua-5-3-5
-      - name: checkout libxml2
-        uses : actions/checkout@v3
-        with :
-          repository: Tekenlight/libxml2
-          path: libxml2
-      - name: checkout hiredis
-        uses : actions/checkout@v3
-        with :
-          repository: Tekenlight/hiredis
-          path: hiredis
-      - name: checkout http-parser
-        uses : actions/checkout@v3
-        with :
-          repository: Tekenlight/http-parser
-          path: http-parser
-      - name: checkout libev
-        uses : actions/checkout@v3
-        with :
-          repository: Tekenlight/libev
-          path: libev
-      - name: checkout lua
-        uses : actions/checkout@v3
-        with :
-          repository: Tekenlight/lua
-          path: lua
+          repository: Tekenlight/evlua_build
+          path: evlua_build
+     - name: trigger build
+        run: |
+          cd evlua_build
+          sh run.sh
+          tail -f build_output.log
