@@ -180,6 +180,7 @@ function build_executable() {
     mkdir -p $EXCECUTABLE_PATH
     echo "building executable in $EXCECUTABLE_PATH for $PN from $INSTALL_DIRECTORY"
     ls -l $INSTALL_DIRECTORY/usr
+    ls -l $INSTALL_DIRECTORY/usr/bin
     if [ "$PN" == "arm64" ]; then
         hdiutil create -format UDRW -srcfolder $INSTALL_DIRECTORY $EXCECUTABLE_PATH/evlua.dmg
     else
