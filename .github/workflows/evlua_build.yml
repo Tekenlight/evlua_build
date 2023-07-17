@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
+env:
+  RELEASE_VERSION: v0.0.1
 jobs:
   build:
     name: build evlua
@@ -41,10 +43,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v0.0.1
-          release_name: Release v0.0.1
+          tag_name: ${{ secrets.RELEASE_VERSION }}
+          release_name: Release ${{ secrets.RELEASE_VERSION }}
           body: |
-            Release Notes for v0.0.1:
+            Release Notes for ${{ secrets.RELEASE_VERSION }}:
             - Some notes
 
       - name: Upload .deb File

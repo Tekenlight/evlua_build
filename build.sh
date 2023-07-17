@@ -178,7 +178,8 @@ function copy_evlua_libraries() {
 
 function build_executable() {
     mkdir -p $EXCECUTABLE_PATH
-    echo "building executable in $EXCECUTABLE_PATH for $PN"
+    echo "building executable in $EXCECUTABLE_PATH for $PN from $INSTALL_DIRECTORY"
+    ls -l $INSTALL_DIRECTORY/usr
     if [ "$PN" == "arm64" ]; then
         hdiutil create -format UDRW -srcfolder $INSTALL_DIRECTORY $EXCECUTABLE_PATH/evlua.dmg
     else
