@@ -1,4 +1,4 @@
-name: EVLUA_DEB
+name: EVLUA
 on:
   workflow_dispatch:
   push:
@@ -294,3 +294,26 @@ jobs:
           chmod -R 755 $INSTALLATION_PATH/usr
           dpkg-deb --build $INSTALLATION_PATH $EXCECUTABLE_PATH/evlua-${{ vars.RELEASE_VERSION }}.deb
           ls -l $EXCECUTABLE_PATH
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ vars.RELEASE_VERSION }}
+          release_name: Release v${{ vars.RELEASE_VERSION }}
+          body: |
+            Release Notes for v${{ vars.RELEASE_VERSION }}:
+            - Some notes
+
+      - name: Upload .deb File
+        id: upload_deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: $EXCECUTABLE_PATH/executables/evlua-${{ vars.RELEASE_VERSION }}.deb
+          asset_name: evlua-${{ vars.RELEASE_VERSION }}.deb
+          asset_content_type: application/x-deb
