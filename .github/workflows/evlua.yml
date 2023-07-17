@@ -15,21 +15,19 @@ jobs:
          echo "Building release: ${{ vars.RELEASE_VERSION }}"
          echo "INSTALLATION_PATH=$(pwd)/installation" >> "$GITHUB_ENV"
          echo "LUA_INSTALLATION_DIR=$(pwd)/lua" >> "$GITHUB_ENV"
+         echo "LUAROCKS_INSTALLATION_DIR=$(pwd)/luarocks" >> "$GITHUB_ENV"
+         echo "LUAROCKS_ROOT_INSTALLATION_DIR=$(pwd)/luarocks-root" >> "$GITHUB_ENV"
+         echo "THIRD_PARTY_INSTALLABLES=$(pwd)/third-party" >> "$GITHUB_ENV"
+         echo "POSTGRES_INSTALL_DIRECTORY=$(pwd)/postgres" >> "$GITHUB_ENV"
       
       - name: create installation directory
         run: |
           echo "All installables will be installed in $INSTALLATION_PATH"
           mkdir -p $INSTALLATION_PATH
-          echo "Installation directory created"
-          cd $INSTALLATION_PATH
-          pwd
-          ls -l
-          echo "Lua will be installed in $LUA_INSTALLATION_DIR"
+          echo "Installation directory created; creating other required directory"
           mkdir -p $LUA_INSTALLATION_DIR
-          echo "Lua directory created"
-          cd $LUA_INSTALLATION_DIR
-          pwd
-          ls -l
+          mkdir -p $LUAROCKS_INSTALLATION_DIR
+          mkdir -p $THIRD_PARTY_INSTALLABLES
       
       - name: install apt dependencies
         run: |
@@ -126,3 +124,51 @@ jobs:
           make linux
           make install  INSTALL_TOP=$LUA_INSTALLATION_DIR
           ls -l $LUA_INSTALLATION_DIR
+
+      - name: dowload and install luarocks
+        run: |
+          cd $THIRD_PARTY_INSTALLABLES
+          wget https://luarocks.org/releases/luarocks-3.8.0.tar.gz
+          tar xvzf luarocks-3.8.0.tar.gz
+          cd luarocks-3.8.0
+          ./configure  --prefix=$LUAROCKS_INSTALLATION_DIR --rocks-tree=$LUAROCKS_ROOT_INSTALLATION_DIR --with-lua=$LUA_INSTALLATION_DIR
+          make
+          make install
+
+      - name: dowload and install postgresql
+        run: |
+          cd $THIRD_PARTY_INSTALLABLES
+          POSTGRES_DIRECTORY=$THIRD_PARTY_INSTALLABLES"/postgresql-15.3"
+          wget https://ftp.postgresql.org/pub/source/v15.3/postgresql-15.3.tar.gz
+          tar xvzf postgresql-15.3.tar.gz
+          cd $POSTGRES_DIRECTORY
+          CFLAGS=-fPIC ./configure
+          cd $POSTGRES_DIRECTORY/src/interfaces/libpq/
+          make
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+          cd $POSTGRES_DIRECTORY/src/bin/pg_config
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+          cd $POSTGRES_DIRECTORY/src/backend
+          make generated-headers
+          cd $POSTGRES_DIRECTORY/src/include
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+          cd $POSTGRES_DIRECTORY/src/common
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+          cd $POSTGRES_DIRECTORY/src/port
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+
+      - name: checkout evpoco
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlightamit/evpoco
+          ref: lualib_cmake_changes
+          path: evpoco
+      
+      - name: build and install evpoco
+        run: |
+          cd evpoco
+          mkdir build
+          cd build
+          cmake -DPG_BUILD_PATH=$POSTGRES_INSTALL_DIRECTORY -DCMAKE_INSTALL_PREFIX:PATH=$INSTALLATION_PATH/usr -DLUA_INSTALL_DIR=$LUA_INSTALLATION_DIR ..
+          cmake --build .
+          make install
