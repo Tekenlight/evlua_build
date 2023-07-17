@@ -185,6 +185,17 @@ jobs:
         run: |
           cd lua-cjson
           $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+
+      - name: checkout date
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/date
+          path: date
+      
+      - name: build and install date
+        run: |
+          cd date
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
       
       - name: checkout lua_schema
         uses : actions/checkout@v3
@@ -206,17 +217,6 @@ jobs:
       - name: build and install luaffifb
         run: |
           cd luaffifb
-          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
-      
-      - name: checkout date
-        uses : actions/checkout@v3
-        with :
-          repository: Tekenlight/date
-          path: date
-      
-      - name: build and install date
-        run: |
-          cd date
           $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
 
       - name: checkout lbc-101
