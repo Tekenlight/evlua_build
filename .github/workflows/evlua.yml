@@ -167,8 +167,8 @@ jobs:
       - name: build and install evpoco
         run: |
           cd evpoco
-          mkdir build
-          cd build
+          mkdir cmake-build
+          cd cmake-build
           cmake -DPG_BUILD_PATH=$POSTGRES_INSTALL_DIRECTORY -DCMAKE_INSTALL_PREFIX:PATH=$INSTALLATION_PATH/usr -DLUA_INSTALL_DIR=$LUA_INSTALLATION_DIR ..
           cmake --build .
           make install
