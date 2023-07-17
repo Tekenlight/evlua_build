@@ -1,27 +1,59 @@
 name: EVLUA
 on:
-  workflow_dispatch
-
-env:
-  BASE_PATH: evlua_build
-
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
 jobs:
-  build_evlua:
+  build:
     name: build evlua
     runs-on: ubuntu-latest
     steps:
       - name: install apt dependencies
         run: |
-          apt-get update
-          apt install -y zlib1g
-          apt-get install -y zlib1g-dev cmake g++ build-essential clang liblzma-dev libssl-dev libreadline-dev autoconf libtool libsqlite3-dev wget zip pkg-config 
+          sudo apt-get update
+          sudo apt install -y zlib1g
+          sudo apt-get install -y zlib1g-dev cmake g++ build-essential clang liblzma-dev libssl-dev libreadline-dev autoconf libtool libsqlite3-dev wget zip pkg-config 
+      
       - name: checkout evlua_build
         uses : actions/checkout@v3
         with :
           repository: Tekenlight/evlua_build
           path: evlua_build
-     - name: trigger build
+      
+      - name: build evlua
         run: |
           cd evlua_build
-          sh run.sh
-          tail -f build_output.log
+          export BASE_PATH=$(pwd)/
+          echo "BUILD_PATH=$BASE_PATH" >> "$GITHUB_ENV"
+          ls -l
+          bash ./build.sh
+      
+      - name: check if deb file generated
+        run: |
+          cd evlua_build
+          ls -l
+          echo ${{ env.BUILD_PATH }}
+          echo "Build successfully executed" 
+      
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v0.0.1
+          release_name: Release v0.0.1
+          body: |
+            Release Notes for v0.0.1:
+            - Some notes
+
+      - name: Upload .deb File
+        id: upload_deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.BUILD_PATH }}/executables/evlua.deb
+          asset_name: evlua.deb
+          asset_content_type: application/x-deb
