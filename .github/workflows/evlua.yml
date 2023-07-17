@@ -122,7 +122,7 @@ jobs:
         run: |
           cd lua-5-3-5-build
           mkdir src
-          cd -r ../lua/* ./src/
+          cp -r ../lua/* ./src/
           make linux
           make install  INSTALL_TOP=$LUA_INSTALLATION_DIR
           ls -l $LUA_INSTALLATION_DIR
