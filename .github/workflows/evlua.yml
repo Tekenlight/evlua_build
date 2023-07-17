@@ -12,14 +12,116 @@ jobs:
     steps:
       - name: configure environment
         run: |
-         echo "Building release: ${{  vars.RELEASE_VERSION }}"
+         echo "Building release: ${{ vars.RELEASE_VERSION }}"
          echo "INSTALLATION_PATH=$(pwd)/installation" >> "$GITHUB_ENV"
+         echo "LUA_INSTALLATION_DIR=$(pwd)/lua" >> "$GITHUB_ENV"
       
       - name: create installation directory
         run: |
           echo "All installables will be installed in $INSTALLATION_PATH"
           mkdir -p $INSTALLATION_PATH
-          echo "Directory created"
+          echo "Installation directory created"
           cd $INSTALLATION_PATH
           pwd
           ls -l
+          echo "Lua will be installed in $LUA_INSTALLATION_DIR"
+          mkdir -p $LUA_INSTALLATION_DIR
+          echo "Lua directory created"
+          cd $LUA_INSTALLATION_DIR
+          pwd
+          ls -l
+      
+      - name: install apt dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y zlib1g
+          sudo apt-get install -y zlib1g-dev cmake g++ build-essential clang liblzma-dev libssl-dev libreadline-dev autoconf libtool libsqlite3-dev wget zip pkg-config 
+     
+     - name: checkout efio
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/efio
+          path: efio
+
+    - name: build and install efio
+      run: |
+        cd efio
+        mkdir build
+        cd build
+        cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ..
+        cmake --build .
+        make install DESTDIR=$INSTALLATION_PATH
+
+     - name: checkout hiredis
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/hiredis
+          path: hiredis
+
+    - name: build and install hiredis
+      run: |
+        cd hiredis
+        mkdir build
+        cd build
+        cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ..
+        cmake --build .
+        make install DESTDIR=$INSTALLATION_PATH
+
+     - name: checkout http-parser
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/http-parser
+          path: http-parser
+
+    - name: build and install http-parser
+      run: |
+        cd http-parser
+        make install PREFIX=/usr DESTDIR=$INSTALLATION_PATH
+    
+     - name: checkout libev
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/libev
+          path: libev
+
+    - name: build and install libev
+      run: |
+        cd libev
+        autoreconf -i
+        ./configure --prefix=$INSTALLATION_PATH/usr --exec-prefix=$INSTALLATION_PATH/usr
+        make
+        make install
+    
+    - name: checkout libxml2
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/libev
+          path: libxml2
+
+    - name: build and install libxml2
+      run: |
+        cd libxml2
+        autoreconf -i
+        ./configure --without-python --prefix=$INSTALLATION_PATH/usr --exec-prefix=$INSTALLATION_PATH/usr
+        make
+        make install
+    
+    - name: checkout lua
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/lua
+          path: lua
+
+    - name: checkout lua-5-3-5-build
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/lua-5-3-5-build
+          path: lua-5-3-5-build
+    
+    - name: install lua
+      run: |
+        cd lua-5-3-5-build
+        mkdir src
+        cd -r ../lua/* ./src/
+        make linux
+        make install  INSTALL_TOP=$LUA_INSTALLATION_DIR
