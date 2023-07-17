@@ -8,11 +8,11 @@ jobs:
   build:
     name: build evlua
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: configure environment
         run: |
-         echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
-         echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+         echo "Building release: ${{  vars.RELEASE_VERSION }}"
          echo "INSTALLATION_PATH=$(pwd)/installation" >> "$GITHUB_ENV"
       
       - name: create installation directory
