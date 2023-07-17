@@ -1,0 +1,25 @@
+name: EVLUA_DEB
+on:
+  workflow_dispatch:
+  push:
+    tags: 
+      - "*"
+jobs:
+  build:
+    name: build evlua
+    runs-on: ubuntu-latest
+    steps:
+      - name: configure environment
+        run: |
+         echo "Tag name from GITHUB_REF_NAME: $GITHUB_REF_NAME"
+         echo "Tag name from github.ref_name: ${{  github.ref_name }}"
+         echo "INSTALLATION_PATH=$(pwd)/installation" >> "$GITHUB_ENV"
+      
+      - name: create installation directory
+        run: |
+          echo "All installables will be installed in $INSTALLATION_PATH"
+          mkdir -p $INSTALLATION_PATH
+          echo "Directory created"
+          cd $INSTALLATION_PATH
+          pwd
+          ls -l
