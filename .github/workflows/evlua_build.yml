@@ -1,4 +1,4 @@
-name: EVLUA
+name: EVLUA_SCRIPT
 on:
   workflow_dispatch:
   push:
