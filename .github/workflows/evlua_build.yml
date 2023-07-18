@@ -49,6 +49,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: $BUILD_PATH/executables/evlua.deb
+          asset_path: ${{ env.BUILD_PATH }}/executables/evlua.deb
           asset_name: evlua-${{ env.RELEASE_VERSION }}.deb
           asset_content_type: application/x-deb
