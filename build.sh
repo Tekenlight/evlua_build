@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#set build path
+export BASE_PATH=$(pwd)/
+
 # Init config file
 . ./config.env
 
@@ -8,7 +11,7 @@ source ./utils.sh
 
 # Print platform name
 PN=$(platform_name)
-rm -rf $BUILD_PATH"platform"
+rm -rf $BASE_PATH"platform"
 
 function clone_libraries() {
     build_type=$1
