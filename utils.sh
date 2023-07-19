@@ -25,12 +25,7 @@ clone_repo() {
         git pull
     else
         mkdir -p $REPO_CLONE_DIRECTORY
-        # git clone $REPO_URL $REPO_CLONE_DIRECTORY
-        if [ "$REPO_CLONE_DIRECTORY" == "$REPO_DIRECTORY/evpoco" ]; then
-            git clone -b lualib_cmake_changes $REPO_URL $REPO_CLONE_DIRECTORY
-        else
-            git clone $REPO_URL $REPO_CLONE_DIRECTORY
-        fi
+        git clone $REPO_URL $REPO_CLONE_DIRECTORY
     fi
 }
 

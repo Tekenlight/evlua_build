@@ -162,8 +162,8 @@ jobs:
       - name: checkout evpoco
         uses : actions/checkout@v3
         with :
-          repository: Tekenlightamit/evpoco
-          ref: lualib_cmake_changes
+          repository: Tekenlight/evpoco
+          # ref: lualib_cmake_changes
           path: evpoco
       
       - name: build and install evpoco
