@@ -95,7 +95,7 @@ function install_luarocks_if_not_already() {
         fi
         cd luarocks-3.8.0
         mkdir -p $LUAROCKS_INSTALLATION_DIR
-        ./configure  --prefix=$LUAROCKS_INSTALLATION_DIR --rocks-tree=$LUAROCKS_ROOT_INSTALLATION_DIR --with-lua=$LUA_INSTALLATION_DIR
+        ./configure  --prefix=$LUAROCKS_INSTALLATION_DIR --rocks-tree=$INSTALL_DIRECTORY/usr --with-lua=$LUA_INSTALLATION_DIR
         make
         make install
     fi
@@ -175,10 +175,6 @@ function build_evlua() {
     done
 }
 
-function copy_evlua_libraries() {
-    cp -r $LUAROCKS_ROOT_INSTALLATION_DIR/* $INSTALL_DIRECTORY/usr
-}
-
 function build_executable() {
     mkdir -p $EXCECUTABLE_PATH
     echo "building executable in $EXCECUTABLE_PATH for $PN from $INSTALL_DIRECTORY"
@@ -195,4 +191,6 @@ function build_executable() {
     fi
 }
 
-clone_libraries foundation; build_foundation; install_luarocks_if_not_already; install_postgres_if_not_already; install_evpoco; clone_libraries evlua; build_evlua; copy_evlua_libraries; build_executable
+clone_libraries foundation; build_foundation; install_luarocks_if_not_already; install_postgres_if_not_already; install_evpoco; clone_libraries evlua; 
+build_evlua; 
+build_executable
