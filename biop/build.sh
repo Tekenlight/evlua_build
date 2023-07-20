@@ -113,7 +113,7 @@ function move() {
     echo "moving binaries created for $BUILD_TYPE"
     rm -rf $BIOP_INSTALL_DIRECTORY/$BUILD_TYPE
     mkdir -p $BIOP_INSTALL_DIRECTORY/$BUILD_TYPE/usr
-    mv $HOME/.luarocks/ $BIOP_INSTALL_DIRECTORY/$BUILD_TYPE/usr/
+    mv $HOME/.luarocks/* $BIOP_INSTALL_DIRECTORY/$BUILD_TYPE/usr/
 }
 
 function build_executable() {
