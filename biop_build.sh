@@ -89,8 +89,9 @@ function build() {
         DIRECTORY_NAME=$(echo "$MODULE" | awk -F/ '{print $(NF)}')
         echo "Directory name: $DIRECTORY_NAME"
         echo "========== Installing: $DIRECTORY_NAME =========="
-        build
-        deploy
+        cd $MODULE
+        $INSTALL_DIRECTORY/usr/bin/build
+        $INSTALL_DIRECTORY/usr/bin/deploy
         echo "========== Done =========="
     done
 
