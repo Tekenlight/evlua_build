@@ -2,5 +2,9 @@ executables
 platform
 tp-lib
 tp-lib-ex
-biop/
+biop/ADMIN/
+biop/SUSBCRIBER/
+biop/XCHANGE/
+biop/binaries/
+biop/common/
 *.log
