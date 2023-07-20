@@ -9,6 +9,9 @@ export BASE_PATH=$(pwd)/../
 # Init Utils
 source ../utils.sh
 
+PN=$(platform_name)
+echo "building for $PN"
+
 # check if required paths are in the environment
 CHECK_LUA_PATH=x$LUA_PATH
 CHECK_LUA_CPATH=x$LUA_CPATH
@@ -120,7 +123,7 @@ function build_executable() {
     #create a installable directory for biop and use it to generate the executable
     mkdir -p $EXCECUTABLE_PATH
     echo "building executable in $EXCECUTABLE_PATH for $PN from $BIOP_INSTALL_DIRECTORY/$BUILD_TYPE"
-    if [ "$PN" == "arm64" ]; then
+    if [ "$PN" = "arm64" ]; then
         hdiutil create -format UDRW -srcfolder $BIOP_INSTALL_DIRECTORY/$BUILD_TYPE/ $EXCECUTABLE_PATH/$BUILD_TYPE.dmg
     else
         mkdir -p $BIOP_INSTALL_DIRECTORY/$BUILD_TYPE/DEBIAN
