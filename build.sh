@@ -152,9 +152,6 @@ function install_evpoco() {
 }
 
 function build_evlua() {
-    echo "clean .luarocks if exists"
-    rm -r $LUAROCKS_ROOT_INSTALLATION_DIR
-
     # list all the clone directory and build cmake files
     for MODULE in "$EVLUA_REPO_DIRECTORY"/*; do
         echo "Folder: $MODULE"
