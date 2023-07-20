@@ -57,6 +57,10 @@ function clone_common_libraries() {
     for REPO_URL in "${BIOP_COMMON_REPOS[@]}"; do
         clone_repo $REPO_URL $common_dir
     done
+    local biop_dir=$BIOP_REPO_DIRECTORY/biop
+    echo "Cloning common libraries into $biop_dir"
+    mkdir -p $biop_dir
+    clone_repo $BIOP_MAIN_FILE $biop_dir
 }
 
 function clone_libraries() {
@@ -84,7 +88,7 @@ function clone_libraries() {
 
 function build() {
     # build all common
-    for MODULE in "$BIOP_REPO_DIRECTORY/common/*"; do
+    for MODULE in "$BIOP_REPO_DIRECTORY"/common/*; do
         echo "Folder: $MODULE"
         DIRECTORY_NAME=$(echo "$MODULE" | awk -F/ '{print $(NF)}')
         echo "Directory name: $DIRECTORY_NAME"
@@ -96,7 +100,7 @@ function build() {
     done
 
     # build all specific
-    for MODULE in "$BIOP_REPO_DIRECTORY/$BUILD_TYPE/*"; do
+    for MODULE in "$BIOP_REPO_DIRECTORY/$BUILD_TYPE"/*; do
         echo "Folder: $MODULE"
         DIRECTORY_NAME=$(echo "$MODULE" | awk -F/ '{print $(NF)}')
         echo "Directory name: $DIRECTORY_NAME"
