@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
 env:
-  RELEASE_VERSION: v0.0.1
+  RELEASE_VERSION: 0.0.1
 jobs:
   build:
     name: build evlua
@@ -25,10 +25,7 @@ jobs:
       - name: build evlua
         run: |
           cd evlua_build
-          export BASE_PATH=$(pwd)/
-          echo "BUILD_PATH=$BASE_PATH" >> "$GITHUB_ENV"
-          ls -l
-          bash ./build.sh
+          bash ./evluaBuild -f -v ${{ env.RELEASE_VERSION }}
       
       - name: Create Release
         id: create_release
@@ -36,19 +33,30 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ env.RELEASE_VERSION }}
-          release_name: Release ${{ env.RELEASE_VERSION }}
+          tag_name: v${{ env.RELEASE_VERSION }}
+          release_name: Release v${{ env.RELEASE_VERSION }}
           body: |
-            Release Notes for ${{ env.RELEASE_VERSION }}:
+            Release Notes for v${{ env.RELEASE_VERSION }}:
             - Some notes
 
-      - name: Upload .deb File
+      - name: Upload .deb file for dev
         id: upload_deb
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BUILD_PATH }}/executables/evlua.deb
+          asset_path: $HOME/executable/evlua-dev-${{ env.RELEASE_VERSION }}.dmg
+          asset_name: evlua-dev-${{ env.RELEASE_VERSION }}.deb
+          asset_content_type: application/x-deb
+      
+      - name: Upload .deb file for prod
+        id: upload_deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: $HOME/executable/evlua-${{ env.RELEASE_VERSION }}.dmg
           asset_name: evlua-${{ env.RELEASE_VERSION }}.deb
           asset_content_type: application/x-deb

@@ -1,0 +1,309 @@
+function is_success() {
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+}
+
+function check_if_directory_is_not_empty() {
+    local directory=$1
+    echo "checking if $directory exists and is empty..."
+    if [[ -d "$directory" && -n "$(ls -A "$directory")" ]]; then
+        echo "The $directory exists and is not empty."
+        return 0
+    else
+        echo "The $directory either does not exist or is empty."
+        return 1
+    fi
+}
+
+function clone_repo() {
+    local REPO_URL="$1"
+    local REPO_DIR="$2"
+    local REPO_CLONE_DIRECTORY=$REPO_DIR"/"$(echo "$REPO_URL" | awk -F/ '{print $(NF)}' | sed 's/\.git$//')
+    echo "cloning into $REPO_CLONE_DIRECTORY"
+    if check_if_directory_is_not_empty "$REPO_CLONE_DIRECTORY"; then
+        echo "$REPO_CLONE_DIRECTORY already exists, checking for update if any..."
+        cd $REPO_CLONE_DIRECTORY
+        git pull >> $log_dir/git 2>&1
+    else
+        mkdir -p $REPO_CLONE_DIRECTORY
+
+        if [ "$REPO_URL" = "https://github.com/Tekenlight/service_utils.git" ]; then
+            git clone -b path_added_install_directory $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1
+        elif [ "$REPO_URL" = "https://github.com/Tekenlight/lua_schema.git" ]; then
+            git clone -b path_change $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1
+        else
+            git clone $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1
+        fi
+    fi
+    is_success
+}
+
+function clone_libraries() {
+    local build_type=$1
+    echo "cloning $build_type"
+    if [ $build_type == "foundation" ]; then
+        for REPO_URL in "${REPOS[@]}"; do
+            clone_repo $REPO_URL $foundation_clone_dir
+        done
+    elif [ $build_type == "lua" ]; then
+        for REPO_URL in "${LUA_REPOS[@]}"; do
+            clone_repo $REPO_URL $lua_clone_dir
+        done
+    elif [ $build_type == "evpoco" ]; then
+        clone_repo $EVPOCO $evlua_path
+    else
+        for REPO_URL in "${EVLUA_REPOS[@]}"; do
+            clone_repo $REPO_URL $evlua_dir
+        done
+    fi
+}
+
+function configure_and_make() {
+    local use_python=$1
+    local type=$2
+    echo "use python: $use_python and type: $type"
+    # Run the autoreconf -i command and capture the output
+    autoreconf -i >> $log_dir/platform 2>&1
+    is_success
+    if [ use_python == true ]; then
+        echo "configuring $type with python"
+        ./configure --prefix=$install_dir/usr --exec-prefix=$install_dir/usr >> $log_dir/platform 2>&1
+    else
+        echo "configuring $type without python"
+        ./configure --without-python --prefix=$install_dir/usr --exec-prefix=$install_dir/usr >> $log_dir/platform 2>&1
+    fi
+    is_success
+    make >> $log_dir/platform 2>&1
+    is_success
+    make install >> $log_dir/platform 2>&1
+    is_success
+}
+
+function build_foundation() {
+    # list all the clone directory and build cmake files
+    for module in "$foundation_clone_dir"/*; do
+        echo "Folder: $module"
+        local dir=$(echo "$module" | awk -F/ '{print $(NF)}')
+        echo "Directory name: $dir"
+        if [ "$dir" == "libev" ] || [ "$dir" == "libxml2" ]; then
+            echo "========== Installing: $dir =========="
+            cd $module
+            if [ "$dir" == "libxml2" ]; then
+                configure_and_make false "libxml2"
+            else
+                configure_and_make true "libev"
+            fi
+            echo "========== Done =========="
+        elif [ "$dir" == "http-parser" ]; then
+            echo "========== Installing: $dir =========="
+            cd $module
+            make install PREFIX=/usr DESTDIR=$install_dir >> $log_dir/platform 2>&1
+            is_success
+            echo "========== Done =========="
+        else
+            echo "===================="
+            echo "Creating build directory"
+            local module_build_dir=$foundation_build_dir"/"$dir
+            echo "Module build directory: $module_build_dir"
+            mkdir -p $module_build_dir
+            echo "===================="
+            cd $module_build_dir
+            echo "========== Building: $dir =========="
+            cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $foundation_clone_dir"/"$dir"/." >> $log_dir/platform 2>&1
+            is_success
+            cmake --build . >> $log_dir/platform 2>&1
+            is_success
+            echo "========== Installing: $dir =========="
+            make install DESTDIR=$install_dir >> $log_dir/platform 2>&1
+            is_success
+            echo "========== Done =========="
+        fi
+    done
+}
+
+function build_custom_lua() {
+        cd $lua_clone_dir/lua-5-3-5-build
+        rm -rf $lua_clone_dir/lua-5-3-5-build/src
+        mkdir -p $lua_clone_dir/lua-5-3-5-build/src
+        cp -r ../lua/* ./src/
+        
+        if [ "$platform_name" == "arm64" ]; then
+            echo "Building lua for macosx"
+            make macosx >> $log_dir/customlua 2>&1
+        else
+            echo "Building lua for linux"
+            make linux >> $log_dir/customlua 2>&1
+        fi
+        is_success
+        mkdir -p $lua_path >> $log_dir/customlua 2>&1
+        make install INSTALL_TOP=$lua_path >> $log_dir/customlua 2>&1
+        is_success
+        echo "========== Done =========="
+}
+
+function install_luarocks_if_not_already() {
+    if check_if_directory_is_not_empty "$lua_rocks_path"; then
+        echo "luarocks already installed..."
+    else
+        echo "luarocks not installed..."
+        mkdir -p $third_party_library
+        cd $third_party_library
+        if ! check_if_directory_is_not_empty "$third_party_library/luarocks-3.8.0"; then
+            wget https://luarocks.org/releases/luarocks-3.8.0.tar.gz >> $log_dir/luarocks 2>&1
+            is_success
+            tar xvzf luarocks-3.8.0.tar.gz >> $log_dir/luarocks 2>&1
+            is_success
+        fi
+        cd luarocks-3.8.0
+        mkdir -p $lua_rocks_path
+        ./configure --prefix=$lua_rocks_path --rocks-tree=$install_dir/usr --with-lua=$lua_path >> $log_dir/luarocks 2>&1
+        is_success
+        make >> $log_dir/luarocks 2>&1
+        is_success
+        make install >> $log_dir/luarocks 2>&1
+        is_success
+    fi
+}
+
+function install_postgres_if_not_already() {
+    if check_if_directory_is_not_empty "$postgres_path"; then
+        echo "postgresql already installed..."
+    else
+        echo "psql not installed..."
+        mkdir -p $third_party_library
+        cd $third_party_library
+        local ps_dir=$third_party_library"/postgresql-15.3"
+
+        if ! check_if_directory_is_not_empty "$ps_dir"; then
+            wget https://ftp.postgresql.org/pub/source/v15.3/postgresql-15.3.tar.gz >> $log_dir/postgres 2>&1
+            is_success
+            tar xvzf postgresql-15.3.tar.gz >> $log_dir/postgres 2>&1
+            is_success
+        fi
+        echo "postgres will be installed in $postgres_path"
+        cd $ps_dir
+        CFLAGS=-fPIC ./configure >> $log_dir/postgres 2>&1
+        is_success
+        cd $ps_dir/src/interfaces/libpq/
+        make >> $log_dir/postgres 2>&1
+        is_success
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        is_success
+        cd $ps_dir/src/bin/pg_config
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        is_success
+        cd $ps_dir/src/backend
+        make generated-headers >> $log_dir/postgres 2>&1
+        is_success
+        cd $ps_dir/src/include
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        is_success
+        cd $ps_dir/src/common
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        is_success
+        cd $ps_dir/src/port
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        is_success
+    fi
+}
+
+function build_and_install_evpoco() {
+    echo "========== evpoco =========="
+    clone_libraries evpoco
+    local poco_build_dir=$foundation_build_dir"/evpoco"
+    echo "========== Directory name: $poco_build_dir =========="
+    mkdir -p $poco_build_dir
+    cd $poco_build_dir
+    if [ "$platform_name" == "arm64" ]; then
+        echo "Building system for macosx"
+        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DLUA_INSTALL_DIR=$lua_path -DTARGET_OS_OSX_HOMEBREW=1 -DCMAKE_OSX_ARCHITECTURES="arm64" $evlua_path/evpoco/. >> $log_dir/evpoco 2>&1
+    else
+        echo "Building system for ubuntu"
+        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DLUA_INSTALL_DIR=$lua_path $evlua_path/evpoco/. >> $log_dir/evpoco 2>&1
+    fi
+    is_success
+    cmake --build . >>$log_dir/evpoco 2>&1
+    is_success
+    make install >>$log_dir/evpoco 2>&1
+    is_success
+}
+
+function build_evlua() {
+    # list all the clone directory and build cmake files
+    echo "== building evlua =="
+    for module in "$evlua_dir"/*; do
+        local dir=$(echo "$module" | awk -F/ '{print $(NF)}')
+        echo "Installting: $dir"
+        
+        if [ $dir == "service_utils" ]; then
+            cd $module
+            cd ../lua-uri
+            echo "Installting: lua-uri"
+            $lua_rocks_path/bin/luarocks make >> $log_dir/evlua 2>&1
+            is_success
+        fi
+        cd $module
+        $lua_rocks_path/bin/luarocks make >> $log_dir/evlua 2>&1
+        is_success
+        echo "========== Done =========="
+    done
+}
+
+function create_controlfile() {
+    mkdir -p $install_dir/DEBIAN/
+    # File name
+    file_name="control"
+
+    if [ "x$PACKAGE_NAME" = "x" ]; then
+        echo "package name not found. Please set PACKAGE_NAME"
+        exit 1
+    fi
+
+    if [ "x$version" = "x" ]; then
+        echo "release version not found. Please set version"
+        exit 1
+    fi
+
+    # Multiline content using a Here Document
+    cat <<EOF >"$install_dir/DEBIAN/$file_name"
+Package: $PACKAGE_NAME
+Version: $version
+Maintainer: $MAINTAINER
+Architecture: $platform_name
+Description: $DESCRIPTION
+EOF
+    is_success
+    echo "File '$file_name' created successfully!"
+}
+
+function build_executable() {
+    local executable_path=$base_dir/executable
+    rm -rf $executable_path
+    mkdir -p $executable_path
+
+    local prod_path=$base_dir/prod
+    rm -rf $prod_path
+    mkdir -p $prod_path/usr
+    
+    echo "building executable in $executable_path for $platform_name from $install_dir"
+    echo "copying prod data"
+    cp -r $install_dir/usr/bin $install_dir/usr/lib $install_dir/usr/share $prod_path/usr/
+    cp -r $lua_path/* $install_dir/usr/
+    cp -r $lua_rocks_path/* $install_dir/usr/
+    if [ "$platform_name" == "arm64" ]; then
+        hdiutil create -format UDRW -srcfolder $prod_path $executable_path/evlua-$version.dmg
+        hdiutil create -format UDRW -srcfolder $install_dir $executable_path/evlua-dev-$version.dmg
+    else
+        create_controlfile
+        chmod -R 755 $install_dir/DEBIAN
+        chmod -R 755 $install_dir/usr
+
+        cp -r $install_dir/DEBIAN $prod_path/
+        chmod -R 755 $prod_path/DEBIAN
+        chmod -R 755 $prod_path/usr
+
+        dpkg-deb --build $prod_path $executable_path/evlua-$version.deb
+        dpkg-deb --build $install_dir $executable_path/evlua-dev-$version.deb
+    fi
+}

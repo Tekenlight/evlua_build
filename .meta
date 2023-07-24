@@ -3,19 +3,25 @@
 ###################################################################################################
 
 # Platform repos to be cloned
-export REPOS=(
+REPOS=(
   "https://github.com/Tekenlight/efio.git"
   "https://github.com/Tekenlight/libxml2.git"
   "https://github.com/Tekenlight/hiredis.git"
   "https://github.com/Tekenlight/http-parser.git"
-  "https://github.com/Tekenlight/evpoco.git"
-  "https://github.com/Tekenlight/lua.git"
-  "https://github.com/Tekenlight/lua-5-3-5-build.git"
   "https://github.com/Tekenlight/libev.git"
 )
 
+# Lua repos to be cloned
+LUA_REPOS=(
+  "https://github.com/Tekenlight/lua-5-3-5-build.git"
+  "https://github.com/Tekenlight/lua.git"
+)
+
+# evpoco to be cloned
+EVPOCO="https://github.com/Tekenlight/evpoco.git"
+
 # EVLUA repos to be cloned
-export EVLUA_REPOS=(
+EVLUA_REPOS=(
   "https://github.com/Tekenlight/lua-cjson.git"
   "https://github.com/Tekenlight/lua_schema.git"
   "https://github.com/Tekenlight/luaffifb.git"
@@ -28,62 +34,29 @@ export EVLUA_REPOS=(
 )
 
 # BIOP repos to be cloned
-export BIOP_COMMON_REPOS=(
+BIOP_COMMON_REPOS=(
   "https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/biop_schema.git"
   "https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/service_common.git"
 )
 
-export BIOP_MAIN_FILE="https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/BIOP.git"
+BIOP_MAIN_FILE="https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/BIOP.git"
 
-export BIOP_ADMIN_REPOS=(
+BIOP_ADMIN_REPOS=(
   "https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/AAA.git"
   "https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/registrar.git"
 )
 
-export BIOP_SUBSCRIBER_REPOS=(
+BIOP_SUBSCRIBER_REPOS=(
   "https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/subscriber.git"
   "https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/xchange_client.git"
 )
 
-export BIOP_XCHANGE_REPOS=(
+BIOP_XCHANGE_REPOS=(
   "https://$GITHUB_USER_NAME:$GITHUB_ACCESS_TOKEN@github.com/BusinessInterOperabilityPlatform/xchange.git"
 )
 
-# System type
-export SYSTEM_TYPE=$(uname -m | awk '{print $0}')
-
-# Build directory
-export BUILD_DIRECTORY=$BASE_PATH"platform/build"
-
-# Install directory
-export INSTALL_DIRECTORY=$BASE_PATH"platform/installables"
-
-# Repo directory
-export REPO_DIRECTORY=$BASE_PATH"platform/repos"
-
-# EVLUA Repo directory
-export EVLUA_REPO_DIRECTORY=$BASE_PATH"platform/evlua-repos"
-
 # BIOP Repo directory
-export BIOP_REPO_DIRECTORY=$BASE_PATH"biop"
+BIOP_REPO_DIRECTORY=$BASE_PATH"biop"
 
 # BIOP Install directory
-export BIOP_INSTALL_DIRECTORY=$BASE_PATH"biop/binaries"
-
-# Third party library path
-export THIRD_PARTY_LIBRARY=$BASE_PATH"tp-lib"
-
-# Lua installation directory
-export LUA_INSTALLATION_DIR=$BASE_PATH"tp-lib-ex/lua"
-
-# Luarocks installation directory
-export LUAROCKS_INSTALLATION_DIR=$BASE_PATH"tp-lib-ex/luarocks"
-
-# Luarocks root installation directory
-export LUAROCKS_ROOT_INSTALLATION_DIR=$BASE_PATH"tp-lib-ex/luarocks-root"
-
-# Postgres installation directory
-export POSTGRES_INSTALL_DIRECTORY=$BASE_PATH"tp-lib-ex/postgresql"
-
-# Executable directory
-export EXCECUTABLE_PATH=$BASE_PATH"executables"
+BIOP_INSTALL_DIRECTORY=$BASE_PATH"biop/binaries"

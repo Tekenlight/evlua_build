@@ -1,0 +1,146 @@
+#!/bin/bash
+
+# Init config file
+. ./.meta && source ./.functions
+install_fresh=false
+
+PACKAGE_NAME="evlua"
+MAINTAINER="support@tekenlight.com"
+DESCRIPTION="EVLUA build"
+
+print_usage() {
+    echo " "
+    echo "options:"
+    echo "-h, -help             show brief help"
+    echo "-f, -fresh            install fresh"
+    echo "-b, -base_dir         specify the base dir to us. All directories/files will be installed inside this directory itself - defaulted to $HOME"
+    echo "-v, -version          specify the release version of the package - defaulted to 0.0.1"
+    echo "-lp, -lua_path        checks for lua instance in the path provided"
+    echo "-rp, -lua_rocks_path  checks for lua rocks instance in the path provided"
+    echo "-pp, -postgres_path   checks for postgres instance in the path provided"
+    exit 0
+}
+
+while getopts lp:rp:pp:b:v:hf flag; do
+    case "${flag}" in
+    b | base_dir)
+        base_dir=${OPTARG}
+        ;;
+    v | version)
+        version=${OPTARG}
+        ;;
+    lp | lua_path)
+        lua_path=${OPTARG}
+        ;;
+    rp | lua_rocks_path)
+        lua_rocks_path=${OPTARG}
+        ;;
+    pp | postgres_path)
+        postgres_path=${OPTARG}
+        ;;
+    h | help)
+        print_usage
+        ;;
+    f | fresh)
+        install_fresh=true
+        ;;
+    *)
+        echo "Unknown option: $1"
+        print_usage
+        exit 1
+        ;;
+    esac
+done
+
+if [ ! -v base_dir ]; then
+    echo "base dir not set using default value $HOME"
+    base_dir=$HOME
+fi
+
+if [ ! -v version ]; then
+    echo "version not set using default value 0.0.1"
+    version="0.0.1"
+fi
+
+if [ ! -v lua_path ]; then
+    lua_path=$base_dir/lua
+fi
+
+if [ ! -v lua_rocks_path ]; then
+    lua_rocks_path=$base_dir/luarocks
+fi
+
+if [ ! -v postgres_path ]; then
+    postgres_path=$base_dir/postgres
+fi
+
+echo "base_path:        $base_dir"
+echo "lua_path:         $lua_path"
+echo "lua_rocks_path:   $lua_rocks_path"
+echo "postgres_path:    $postgres_path"
+echo "version:          $version"
+
+##################### platform ####################
+platform_name=$(uname -m)
+
+################# set directories #################
+# build log directory
+log_dir=$base_dir/logs
+rm -rf $log_dir
+mkdir -p $log_dir
+
+# evlua build directory
+evlua_path=$base_dir/evlua
+mkdir -p $evlua_path
+
+# install directory
+install_dir=$base_dir/installables
+if [ "$install_fresh" = "true" ]; then
+    echo "doing fresh installation"
+    rm -rf $install_dir
+fi
+mkdir -p $install_dir
+
+# external library directory
+third_party_library=$base_dir/evlua/tp-libraries
+mkdir -p $third_party_library
+###################################################
+
+function build_evlua_foundation() {
+    echo "evlua will be build in $evlua_path and installed in $install_dir"
+
+    foundation_clone_dir=$evlua_path/evfoundation-repos
+    clone_libraries foundation
+
+    foundation_build_dir=$evlua_path/build
+    echo "cleaning foundation's dir: $foundation_build_dir, to start fresh build"
+    rm -rf $foundation_build_dir
+    mkdir -p $foundation_build_dir
+    build_foundation
+}
+
+function build_lua() {
+    echo "custom lua will be build in $evlua_path and installed in $lua_path"
+
+    lua_clone_dir=$evlua_path/custom-lua-repos
+    rm -rf $lua_clone_dir
+    mkdir -p $lua_clone_dir
+
+    clone_libraries lua
+    build_custom_lua
+}
+
+function clone_and_build_evlua() {
+    evlua_dir=$evlua_path/evlua-repos
+    mkdir -p $evlua_dir
+    clone_libraries evlua
+    build_evlua
+}
+
+build_evlua_foundation
+build_lua
+install_luarocks_if_not_already
+install_postgres_if_not_already
+build_and_install_evpoco
+clone_and_build_evlua
+build_executable
