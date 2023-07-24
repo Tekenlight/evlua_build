@@ -40,7 +40,7 @@ jobs:
             - Some notes
 
       - name: Upload .deb file for dev
-        id: upload_deb
+        id: upload_dev_deb
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
