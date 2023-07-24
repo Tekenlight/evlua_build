@@ -26,7 +26,7 @@ jobs:
         run: |
           cd evlua_build
           echo "BINARY_DIR=$(pwd)/executable" >> "$GITHUB_ENV"
-          bash ./evluaBuild -f -v ${{ env.RELEASE_VERSION }}
+          bash ./evluaBuild -f -v ${{ env.RELEASE_VERSION }} -b $(pwd)
       
       - name: Create Release
         id: create_release
