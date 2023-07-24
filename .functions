@@ -24,16 +24,16 @@ function clone_repo() {
     if check_if_directory_is_not_empty "$REPO_CLONE_DIRECTORY"; then
         echo "$REPO_CLONE_DIRECTORY already exists, checking for update if any..."
         cd $REPO_CLONE_DIRECTORY
-        git pull >> $log_dir/git 2>&1
+        git pull >> $log_dir/git 2>&1 | tee $log_dir/git
     else
         mkdir -p $REPO_CLONE_DIRECTORY
 
         if [ "$REPO_URL" = "https://github.com/Tekenlight/service_utils.git" ]; then
-            git clone -b path_added_install_directory $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1
+            git clone -b path_added_install_directory $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1 | tee $log_dir/git
         elif [ "$REPO_URL" = "https://github.com/Tekenlight/lua_schema.git" ]; then
-            git clone -b path_change $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1
+            git clone -b path_change $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1 | tee $log_dir/git
         else
-            git clone $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1
+            git clone $REPO_URL $REPO_CLONE_DIRECTORY >> $log_dir/git 2>&1 | tee $log_dir/git
         fi
     fi
     is_success
@@ -64,19 +64,19 @@ function configure_and_make() {
     local type=$2
     echo "use python: $use_python and type: $type"
     # Run the autoreconf -i command and capture the output
-    autoreconf -i >> $log_dir/platform 2>&1
+    autoreconf -i >> $log_dir/platform 2>&1 | tee $log_dir/platform
     is_success
     if [ use_python == true ]; then
         echo "configuring $type with python"
-        ./configure --prefix=$install_dir/usr --exec-prefix=$install_dir/usr >> $log_dir/platform 2>&1
+        ./configure --prefix=$install_dir/usr --exec-prefix=$install_dir/usr >> $log_dir/platform 2>&1 | tee $log_dir/platform
     else
         echo "configuring $type without python"
-        ./configure --without-python --prefix=$install_dir/usr --exec-prefix=$install_dir/usr >> $log_dir/platform 2>&1
+        ./configure --without-python --prefix=$install_dir/usr --exec-prefix=$install_dir/usr >> $log_dir/platform 2>&1 | tee $log_dir/platform
     fi
     is_success
-    make >> $log_dir/platform 2>&1
+    make >> $log_dir/platform 2>&1 | tee $log_dir/platform
     is_success
-    make install >> $log_dir/platform 2>&1
+    make install >> $log_dir/platform 2>&1 | tee $log_dir/platform
     is_success
 }
 
@@ -98,7 +98,7 @@ function build_foundation() {
         elif [ "$dir" == "http-parser" ]; then
             echo "========== Installing: $dir =========="
             cd $module
-            make install PREFIX=/usr DESTDIR=$install_dir >> $log_dir/platform 2>&1
+            make install PREFIX=/usr DESTDIR=$install_dir >> $log_dir/platform 2>&1 | tee $log_dir/platform
             is_success
             echo "========== Done =========="
         else
@@ -110,12 +110,12 @@ function build_foundation() {
             echo "===================="
             cd $module_build_dir
             echo "========== Building: $dir =========="
-            cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $foundation_clone_dir"/"$dir"/." >> $log_dir/platform 2>&1
+            cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr $foundation_clone_dir"/"$dir"/." >> $log_dir/platform 2>&1 | tee $log_dir/platform
             is_success
-            cmake --build . >> $log_dir/platform 2>&1
+            cmake --build . >> $log_dir/platform 2>&1 | tee $log_dir/platform
             is_success
             echo "========== Installing: $dir =========="
-            make install DESTDIR=$install_dir >> $log_dir/platform 2>&1
+            make install DESTDIR=$install_dir >> $log_dir/platform 2>&1 | tee $log_dir/platform
             is_success
             echo "========== Done =========="
         fi
@@ -130,14 +130,14 @@ function build_custom_lua() {
         
         if [ "$platform_name" == "arm64" ]; then
             echo "Building lua for macosx"
-            make macosx >> $log_dir/customlua 2>&1
+            make macosx >> $log_dir/customlua 2>&1 | tee $log_dir/customlua
         else
             echo "Building lua for linux"
-            make linux >> $log_dir/customlua 2>&1
+            make linux >> $log_dir/customlua 2>&1 | tee $log_dir/customlua
         fi
         is_success
-        mkdir -p $lua_path >> $log_dir/customlua 2>&1
-        make install INSTALL_TOP=$lua_path >> $log_dir/customlua 2>&1
+        mkdir -p $lua_path >> $log_dir/customlua 2>&1 | tee $log_dir/customlua
+        make install INSTALL_TOP=$lua_path >> $log_dir/customlua 2>&1 | tee $log_dir/customlua
         is_success
         echo "========== Done =========="
 }
@@ -150,18 +150,18 @@ function install_luarocks_if_not_already() {
         mkdir -p $third_party_library
         cd $third_party_library
         if ! check_if_directory_is_not_empty "$third_party_library/luarocks-3.8.0"; then
-            wget https://luarocks.org/releases/luarocks-3.8.0.tar.gz >> $log_dir/luarocks 2>&1
+            wget https://luarocks.org/releases/luarocks-3.8.0.tar.gz >> $log_dir/luarocks 2>&1 | tee $log_dir/luarocks
             is_success
-            tar xvzf luarocks-3.8.0.tar.gz >> $log_dir/luarocks 2>&1
+            tar xvzf luarocks-3.8.0.tar.gz >> $log_dir/luarocks 2>&1 | tee $log_dir/luarocks
             is_success
         fi
         cd luarocks-3.8.0
         mkdir -p $lua_rocks_path
-        ./configure --prefix=$lua_rocks_path --rocks-tree=$install_dir/usr --with-lua=$lua_path >> $log_dir/luarocks 2>&1
+        ./configure --prefix=$lua_rocks_path --rocks-tree=$install_dir/usr --with-lua=$lua_path >> $log_dir/luarocks 2>&1 | tee $log_dir/luarocks
         is_success
-        make >> $log_dir/luarocks 2>&1
+        make >> $log_dir/luarocks 2>&1 | tee $log_dir/luarocks
         is_success
-        make install >> $log_dir/luarocks 2>&1
+        make install >> $log_dir/luarocks 2>&1 | tee $log_dir/luarocks
         is_success
     fi
 }
@@ -176,34 +176,34 @@ function install_postgres_if_not_already() {
         local ps_dir=$third_party_library"/postgresql-15.3"
 
         if ! check_if_directory_is_not_empty "$ps_dir"; then
-            wget https://ftp.postgresql.org/pub/source/v15.3/postgresql-15.3.tar.gz >> $log_dir/postgres 2>&1
+            wget https://ftp.postgresql.org/pub/source/v15.3/postgresql-15.3.tar.gz >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
             is_success
-            tar xvzf postgresql-15.3.tar.gz >> $log_dir/postgres 2>&1
+            tar xvzf postgresql-15.3.tar.gz >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
             is_success
         fi
         echo "postgres will be installed in $postgres_path"
         cd $ps_dir
-        CFLAGS=-fPIC ./configure >> $log_dir/postgres 2>&1
+        CFLAGS=-fPIC ./configure >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
         cd $ps_dir/src/interfaces/libpq/
-        make >> $log_dir/postgres 2>&1
+        make >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
-        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
         cd $ps_dir/src/bin/pg_config
-        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
         cd $ps_dir/src/backend
-        make generated-headers >> $log_dir/postgres 2>&1
+        make generated-headers >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
         cd $ps_dir/src/include
-        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
         cd $ps_dir/src/common
-        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
         cd $ps_dir/src/port
-        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1
+        make install DESTDIR=$postgres_path >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
     fi
 }
@@ -217,15 +217,15 @@ function build_and_install_evpoco() {
     cd $poco_build_dir
     if [ "$platform_name" == "arm64" ]; then
         echo "Building system for macosx"
-        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DLUA_INSTALL_DIR=$lua_path -DTARGET_OS_OSX_HOMEBREW=1 -DCMAKE_OSX_ARCHITECTURES="arm64" $evlua_path/evpoco/. >> $log_dir/evpoco 2>&1
+        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DLUA_INSTALL_DIR=$lua_path -DTARGET_OS_OSX_HOMEBREW=1 -DCMAKE_OSX_ARCHITECTURES="arm64" $evlua_path/evpoco/. >> $log_dir/evpoco 2>&1 | tee $log_dir/evpoco
     else
         echo "Building system for ubuntu"
-        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DLUA_INSTALL_DIR=$lua_path $evlua_path/evpoco/. >> $log_dir/evpoco 2>&1
+        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DLUA_INSTALL_DIR=$lua_path $evlua_path/evpoco/. >> $log_dir/evpoco 2>&1 | tee $log_dir/evpoco
     fi
     is_success
-    cmake --build . >>$log_dir/evpoco 2>&1
+    cmake --build . >>$log_dir/evpoco 2>&1 | tee $log_dir/evpoco
     is_success
-    make install >>$log_dir/evpoco 2>&1
+    make install >>$log_dir/evpoco 2>&1 | tee $log_dir/evpoco
     is_success
 }
 
@@ -240,11 +240,11 @@ function build_evlua() {
             cd $module
             cd ../lua-uri
             echo "Installting: lua-uri"
-            $lua_rocks_path/bin/luarocks make >> $log_dir/evlua 2>&1
+            $lua_rocks_path/bin/luarocks make >> $log_dir/evlua 2>&1 | tee $log_dir/evlua
             is_success
         fi
         cd $module
-        $lua_rocks_path/bin/luarocks make >> $log_dir/evlua 2>&1
+        $lua_rocks_path/bin/luarocks make >> $log_dir/evlua 2>&1 | tee $log_dir/evlua
         is_success
         echo "========== Done =========="
     done
