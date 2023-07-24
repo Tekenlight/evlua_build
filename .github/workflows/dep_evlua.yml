@@ -1,0 +1,319 @@
+name: EVLUA_DEPRECTAED_SCRIPT
+on:
+  workflow_dispatch:
+  push:
+    tags: 
+      - "*"
+jobs:
+  build:
+    name: build evlua
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: configure environment
+        run: |
+         echo "Building release: ${{ vars.RELEASE_VERSION }}"
+         echo "INSTALLATION_PATH=$(pwd)/installation" >> "$GITHUB_ENV"
+         echo "LUA_INSTALLATION_DIR=$(pwd)/lua" >> "$GITHUB_ENV"
+         echo "LUAROCKS_INSTALLATION_DIR=$(pwd)/luarocks" >> "$GITHUB_ENV"
+         echo "LUAROCKS_ROOT_INSTALLATION_DIR=$(pwd)/luarocks-root" >> "$GITHUB_ENV"
+         echo "THIRD_PARTY_INSTALLABLES=$(pwd)/third-party" >> "$GITHUB_ENV"
+         echo "POSTGRES_INSTALL_DIRECTORY=$(pwd)/postgres" >> "$GITHUB_ENV"
+         echo "EXCECUTABLE_PATH=$(pwd)/executable" >> "$GITHUB_ENV"
+      
+      - name: create installation directory
+        run: |
+          echo "All installables will be installed in $INSTALLATION_PATH"
+          mkdir -p $INSTALLATION_PATH
+          echo "Installation directory created; creating other required directory"
+          mkdir -p $LUA_INSTALLATION_DIR
+          mkdir -p $LUAROCKS_INSTALLATION_DIR
+          mkdir -p $THIRD_PARTY_INSTALLABLES
+          mkdir -p $EXCECUTABLE_PATH
+      
+      - name: install apt dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y zlib1g
+          sudo apt-get install -y zlib1g-dev cmake g++ build-essential clang liblzma-dev libssl-dev libreadline-dev autoconf libtool libsqlite3-dev wget zip pkg-config 
+     
+      - name: checkout efio
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/efio
+          path: efio
+
+      - name: build and install efio
+        run: |
+          cd efio
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ..
+          cmake --build .
+          make install DESTDIR=$INSTALLATION_PATH
+
+      - name: checkout hiredis
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/hiredis
+          path: hiredis
+
+      - name: build and install hiredis
+        run: |
+          cd hiredis
+          mkdir build
+          cd build
+          cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ..
+          cmake --build .
+          make install DESTDIR=$INSTALLATION_PATH
+
+      - name: checkout http-parser
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/http-parser
+          path: http-parser
+
+      - name: build and install http-parser
+        run: |
+          cd http-parser
+          make install PREFIX=/usr DESTDIR=$INSTALLATION_PATH
+    
+      - name: checkout libev
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/libev
+          path: libev
+
+      - name: build and install libev
+        run: |
+          cd libev
+          autoreconf -i
+          ./configure --prefix=$INSTALLATION_PATH/usr --exec-prefix=$INSTALLATION_PATH/usr
+          make
+          make install
+    
+      - name: checkout libxml2
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/libev
+          path: libxml2
+
+      - name: build and install libxml2
+        run: |
+          cd libxml2
+          autoreconf -i
+          ./configure --without-python --prefix=$INSTALLATION_PATH/usr --exec-prefix=$INSTALLATION_PATH/usr
+          make
+          make install
+    
+      - name: checkout lua
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/lua
+          path: lua
+
+      - name: checkout lua-5-3-5-build
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/lua-5-3-5-build
+          path: lua-5-3-5-build
+    
+      - name: install lua
+        run: |
+          cd lua-5-3-5-build
+          mkdir src
+          cp -r ../lua/* ./src/
+          make linux
+          make install  INSTALL_TOP=$LUA_INSTALLATION_DIR
+          ls -l $LUA_INSTALLATION_DIR
+
+      - name: dowload and install luarocks
+        run: |
+          cd $THIRD_PARTY_INSTALLABLES
+          wget https://luarocks.org/releases/luarocks-3.8.0.tar.gz
+          tar xvzf luarocks-3.8.0.tar.gz
+          cd luarocks-3.8.0
+          ./configure  --prefix=$LUAROCKS_INSTALLATION_DIR --rocks-tree=$LUAROCKS_ROOT_INSTALLATION_DIR --with-lua=$LUA_INSTALLATION_DIR
+          make
+          make install
+
+      - name: dowload and install postgresql
+        run: |
+          cd $THIRD_PARTY_INSTALLABLES
+          POSTGRES_DIRECTORY=$THIRD_PARTY_INSTALLABLES"/postgresql-15.3"
+          wget https://ftp.postgresql.org/pub/source/v15.3/postgresql-15.3.tar.gz
+          tar xvzf postgresql-15.3.tar.gz
+          cd $POSTGRES_DIRECTORY
+          CFLAGS=-fPIC ./configure
+          cd $POSTGRES_DIRECTORY/src/interfaces/libpq/
+          make
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+          cd $POSTGRES_DIRECTORY/src/bin/pg_config
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+          cd $POSTGRES_DIRECTORY/src/backend
+          make generated-headers
+          cd $POSTGRES_DIRECTORY/src/include
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+          cd $POSTGRES_DIRECTORY/src/common
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+          cd $POSTGRES_DIRECTORY/src/port
+          make install DESTDIR=$POSTGRES_INSTALL_DIRECTORY
+
+      - name: checkout evpoco
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/evpoco
+          # ref: lualib_cmake_changes
+          path: evpoco
+      
+      - name: build and install evpoco
+        run: |
+          cd evpoco
+          mkdir cmake-build
+          cd cmake-build
+          cmake -DPG_BUILD_PATH=$POSTGRES_INSTALL_DIRECTORY -DCMAKE_INSTALL_PREFIX:PATH=$INSTALLATION_PATH/usr -DLUA_INSTALL_DIR=$LUA_INSTALLATION_DIR ..
+          cmake --build .
+          make install
+
+      - name: checkout lua-cjson
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/lua-cjson
+          path: lua-cjson
+      
+      - name: build and install lua-cjson
+        run: |
+          cd lua-cjson
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+
+      - name: checkout date
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/date
+          path: date
+      
+      - name: build and install date
+        run: |
+          cd date
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+      
+      - name: checkout lua_schema
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/lua_schema
+          path: lua_schema
+      
+      - name: build and install lua_schema
+        run: |
+          cd lua_schema
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+
+      - name: checkout luaffifb
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/luaffifb
+          path: luaffifb
+      
+      - name: build and install luaffifb
+        run: |
+          cd luaffifb
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+
+      - name: checkout lbc-101
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/lbc-101
+          path: lbc-101
+      
+      - name: build and install lbc-101
+        run: |
+          cd lbc-101
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+      
+      - name: checkout luaposix
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/luaposix
+          path: luaposix
+      
+      - name: build and install luaposix
+        run: |
+          cd luaposix
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+
+      - name: checkout Penlight
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/Penlight
+          path: Penlight
+      
+      - name: build and install Penlight
+        run: |
+          cd Penlight
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+          
+      - name: checkout lua-uri
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/lua-uri
+          path: lua-uri
+      
+      - name: build and install lua-uri
+        run: |
+          cd lua-uri
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+
+      - name: checkout service_utils
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/service_utils
+          ref: gtbl_changes
+          path: service_utils
+
+      - name: build and install service_utils
+        run: |
+          cd service_utils
+          $LUAROCKS_INSTALLATION_DIR/bin/luarocks make
+      
+      - name: copy rocksfile
+        run: |
+          cp -r $LUAROCKS_ROOT_INSTALLATION_DIR/* $INSTALLATION_PATH/usr
+
+      - name: checkout evlua_build
+        uses : actions/checkout@v3
+        with :
+          repository: Tekenlight/evlua_build
+          path: evlua_build
+
+      - name: create installable
+        run: |
+          mkdir -p $INSTALLATION_PATH/DEBIAN
+          cd evlua_build
+          cp controlfile $INSTALLATION_PATH/DEBIAN/control
+          chmod -R 755 $INSTALLATION_PATH/DEBIAN
+          chmod -R 755 $INSTALLATION_PATH/usr
+          dpkg-deb --build $INSTALLATION_PATH $EXCECUTABLE_PATH/evlua-${{ vars.RELEASE_VERSION }}.deb
+          ls -l $EXCECUTABLE_PATH
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ vars.RELEASE_VERSION }}
+          release_name: Release v${{ vars.RELEASE_VERSION }}
+          body: |
+            Release Notes for v${{ vars.RELEASE_VERSION }}:
+            - Some notes
+
+      - name: Upload .deb File
+        id: upload_deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: $EXCECUTABLE_PATH/executables/evlua-${{ vars.RELEASE_VERSION }}.deb
+          asset_name: evlua-${{ vars.RELEASE_VERSION }}.deb
+          asset_content_type: application/x-deb
