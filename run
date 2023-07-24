@@ -1,0 +1,1 @@
+nohup ./evluaBuild -f -b $(pwd)/evlua 2>&1 | tee nohup &

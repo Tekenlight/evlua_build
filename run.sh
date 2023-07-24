@@ -1,1 +1,0 @@
-nohup ./build.sh > build_output.log 2>&1 &
