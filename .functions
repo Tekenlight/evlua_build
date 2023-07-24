@@ -304,6 +304,8 @@ function build_executable() {
         chmod -R 755 $prod_path/usr
 
         dpkg-deb --build $prod_path $executable_path/evlua-$version.deb
+        ls -l $prod_path/usr/bin
         dpkg-deb --build $install_dir $executable_path/evlua-dev-$version.deb
+        ls -l $install_dir/usr/bin
     fi
 }
