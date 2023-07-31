@@ -32,6 +32,8 @@ function clone_repo() {
             git clone -b path_added_install_directory $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
         elif [ "$REPO_URL" = "https://github.com/Tekenlight/lua_schema.git" ]; then
             git clone -b path_change $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
+        elif [ "$REPO_URL" = "https://github.com/Tekenlightamit/evpoco.git" ]; then
+            git clone -b build_changes $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
         else
             git clone $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
         fi
@@ -123,23 +125,23 @@ function build_foundation() {
 }
 
 function build_custom_lua() {
-        cd $lua_clone_dir/lua-5-3-5-build
-        rm -rf $lua_clone_dir/lua-5-3-5-build/src
-        mkdir -p $lua_clone_dir/lua-5-3-5-build/src
-        cp -r ../lua/* ./src/
-        
-        if [ "$platform_name" == "arm64" ]; then
-            echo "Building lua for macosx"
-            make macosx 2>&1 | tee $log_dir/customlua
-        else
-            echo "Building lua for linux"
-            make linux 2>&1 | tee $log_dir/customlua
-        fi
-        is_success
-        mkdir -p $lua_path 2>&1 | tee $log_dir/customlua
-        make install INSTALL_TOP=$lua_path 2>&1 | tee $log_dir/customlua
-        is_success
-        echo "========== Done =========="
+    cd $lua_clone_dir/lua-5-3-5-build
+    rm -rf $lua_clone_dir/lua-5-3-5-build/src
+    mkdir -p $lua_clone_dir/lua-5-3-5-build/src
+    cp -r ../lua/* ./src/
+
+    if [ "$platform_name" == "arm64" ]; then
+        echo "Building lua for macosx"
+        make macosx 2>&1 | tee $log_dir/customlua
+    else
+        echo "Building lua for linux"
+        make linux 2>&1 | tee $log_dir/customlua
+    fi
+    is_success
+    mkdir -p $lua_path 2>&1 | tee $log_dir/customlua
+    make install INSTALL_TOP=$lua_path 2>&1 | tee $log_dir/customlua
+    is_success
+    echo "========== Done =========="
 }
 
 function install_luarocks_if_not_already() {
@@ -186,7 +188,7 @@ function install_postgres_if_not_already() {
         CFLAGS=-fPIC ./configure 2>&1 | tee $log_dir/postgres
         is_success
         cd $ps_dir/src/interfaces/libpq/
-        make >> $log_dir/postgres 2>&1 | tee $log_dir/postgres
+        make >>$log_dir/postgres 2>&1 | tee $log_dir/postgres
         is_success
         make install DESTDIR=$postgres_path 2>&1 | tee $log_dir/postgres
         is_success
@@ -217,10 +219,10 @@ function build_and_install_evpoco() {
     cd $poco_build_dir
     if [ "$platform_name" == "arm64" ]; then
         echo "Building system for macosx"
-        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DLUA_INSTALL_DIR=$lua_path -DTARGET_OS_OSX_HOMEBREW=1 -DCMAKE_OSX_ARCHITECTURES="arm64" $evlua_path/evpoco/. 2>&1 | tee $log_dir/evpoco
+        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DCMAKE_ETC_PREFIX=$install_dir -DLUA_INSTALL_DIR=$lua_path -DTARGET_OS_OSX_HOMEBREW=1 -DCMAKE_OSX_ARCHITECTURES="arm64" $evlua_path/evpoco/. 2>&1 | tee $log_dir/evpoco
     else
         echo "Building system for ubuntu"
-        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DLUA_INSTALL_DIR=$lua_path $evlua_path/evpoco/. 2>&1 | tee $log_dir/evpoco
+        cmake -DPG_BUILD_PATH=$postgres_path -DCMAKE_INSTALL_PREFIX:PATH=$install_dir/usr -DCMAKE_ETC_PREFIX=$install_dir -DLUA_INSTALL_DIR=$lua_path $evlua_path/evpoco/. 2>&1 | tee $log_dir/evpoco
     fi
     is_success
     cmake --build . 2>&1 | tee $log_dir/evpoco
@@ -235,7 +237,7 @@ function build_evlua() {
     for module in "$evlua_dir"/*; do
         local dir=$(echo "$module" | awk -F/ '{print $(NF)}')
         echo "Installting: $dir"
-        
+
         if [ $dir == "service_utils" ]; then
             cd $module
             cd ../lua-uri
@@ -251,7 +253,7 @@ function build_evlua() {
 }
 
 function create_controlfile() {
-    mkdir -p $install_dir/DEBIAN/
+    mkdir -p "$1"/DEBIAN/
     # File name
     file_name="control"
 
@@ -266,7 +268,7 @@ function create_controlfile() {
     fi
 
     # Multiline content using a Here Document
-    cat <<EOF >"$install_dir/DEBIAN/$file_name"
+    cat <<EOF >"$1/DEBIAN/$file_name"
 Package: $PACKAGE_NAME
 Version: $version
 Maintainer: $MAINTAINER
@@ -277,38 +279,138 @@ EOF
     echo "File '$file_name' created successfully!"
 }
 
-function build_executable() {
-    local executable_path=$base_dir/executable
-    rm -rf $executable_path
-    mkdir -p $executable_path
+function replace_luarocks_bin_files_meta() {
+    local file_name="$2"/usr/local/bin/"$1"
+    if [ ! -f "$file_name" ]; then
+        echo "LuaRocks config file not found: $file_name"
+        exit 1
+    fi
+    # Temporary file for replacement
+    local tmp_file="/tmp/$1.lua"
+    echo "#!/usr/local/bin/lua" >"$tmp_file"
+    echo "package.loaded[\"luarocks.core.hardcoded\"] = { SYSCONFDIR = [[/usr/local/etc/luarocks]] }" >>"$tmp_file"
+    echo "package.path=[[/usr/local/share/lua/5.3/?.lua;]] .. package.path" >>"$tmp_file"
+    echo "local list = package.searchers or package.loaders; table.insert(list, 1, function(name) if name:match(\"^luarocks%.\") then return loadfile([[/usr/local/share/lua/5.3/]] .. name:gsub([[%.]], [[/]]) .. [[.lua]]) end end)" >>"$tmp_file"
+    cat "$file_name" | tail -n +5 >>"$tmp_file"
+    mv "$tmp_file" "$file_name"
+}
 
+function copy_and_configure_lua_and_luarocks() {
+    local dev_path="$1"
+    cp -r $lua_path/* $dev_path/usr/local/
+    cp -r $lua_rocks_path/* $dev_path/usr/local/
+
+     # Check if the config file exists
+    local luarocks_config=$dev_path/usr/local/etc/luarocks/config-5.3.lua
+    if [ ! -f "$luarocks_config" ]; then
+        echo "LuaRocks config file not found: $luarocks_config"
+        exit 1
+    fi
+
+    # New values
+    local new_lua_dir="/usr/local"
+    local new_lua_bindir="/usr/local/bin"
+
+    # Update LUA_DIR, LUA_BINDIR, and root in the LuaRocks config file
+    sed -i.bak -e "s|LUA_DIR = .*|LUA_DIR = \"$new_lua_dir\";|" -e "s|LUA_BINDIR = .*|LUA_BINDIR = \"$new_lua_bindir\";|" -e "s|name = \"system\", root =.*|name = \"system\", root = \"$new_lua_dir\" };|" "$luarocks_config"
+
+    replace_luarocks_bin_files_meta luarocks $dev_path
+    replace_luarocks_bin_files_meta luarocks-admin $dev_path
+
+}
+
+function copy_dev() {
+    echo "copying dev files"
+    local dev_path=$base_dir/dev
+    rm -rf $dev_path
+    mkdir -p $dev_path/usr/local $dev_path/etc
+    cp -r $install_dir/usr/* $dev_path/usr/local/
+    cp -r $install_dir/etc/* $dev_path/etc
+    copy_and_configure_lua_and_luarocks $dev_path
+}
+
+function copy_prod() {
+    echo "copying prod data"
     local prod_path=$base_dir/prod
     rm -rf $prod_path
-    mkdir -p $prod_path/usr
-    
-    echo "building executable in $executable_path for $platform_name from $install_dir"
-    echo "copying prod data"
+    mkdir -p $prod_path/usr/bin $prod_path/usr/lib $prod_path/usr/share $prod_path/etc
     cp -r $install_dir/usr/bin $install_dir/usr/lib $install_dir/usr/share $prod_path/usr/
-    cp -r $lua_path/* $install_dir/usr/
-    cp -r $lua_rocks_path/* $install_dir/usr/
+    cp -r $install_dir/etc/* $prod_path/etc
+}
+
+function check_old_installation() {
+    cat <<EOF > "$1/DEBIAN/preinst"
+    package_name="\$DPKG_MAINTSCRIPT_PACKAGE"
+    remove_package_name="evlua"
+
+    if [ "\$package_name" = "evlua" ]; then
+	    remove_package_name="evlua-dev"
+    elif [ "\$package_name" = "evlua-dev" ]; then
+        remove_package_name="evlua"
+    else
+        remove_package_name=\$package_name
+        exit 0
+    fi
+
+    installed_package=\$(dpkg -l | grep -e \$remove_package_name | awk '{print(\$2)}')
+
+    echo "checking if [\${remove_package_name}] is already installed..."
+
+    if [ "\$(echo "\$installed_package" | head -n 1)" = "\$remove_package_name" ]; then 
+	echo "\n=========="
+        echo "\$remove_package_name found, please uninstall it first before continuing, use command.."
+        echo "sudo dpkg -r \$remove_package_name"
+        echo "==========\n"
+        exit 1 
+    fi
+EOF
+    is_success
+    echo "Preinst file created successfully!"
+}
+
+function build_executable() {
+    echo "package name: $PACKAGE_NAME"
+
+    if [ ! -z "$1" ]; then
+        echo "setting base dir to $1"
+        base_dir=$1
+    fi
+
+    local executable_path=$base_dir/executable
+    mkdir -p $executable_path
+
+    echo "building executable in $executable_path for $platform_name from $install_dir"
+    copy_prod
+    if [ -z "$2" ]; then
+        copy_dev
+    fi
     if [ "$platform_name" == "arm64" ]; then
-        hdiutil create -format UDRW -srcfolder $prod_path $executable_path/evlua-$version.dmg
-        hdiutil create -format UDRW -srcfolder $install_dir $executable_path/evlua-dev-$version.dmg
+        rm $executable_path/$PACKAGE_NAME-$version.dmg
+        hdiutil create -format UDRW -srcfolder $base_dir/prod $executable_path/$PACKAGE_NAME-$version.dmg
+        if [ -z "$2" ]; then
+            PACKAGE_NAME=$PACKAGE_NAME"-dev"
+            rm $executable_path/$PACKAGE_NAME-$version.dmg
+            hdiutil create -format UDRW -srcfolder $base_dir/dev $executable_path/$PACKAGE_NAME-$version.dmg
+        fi
     else
         if [ "$platform_name" = "aarch64" ]; then
             platform_name="arm64"
         fi
-        create_controlfile
-        chmod -R 755 $install_dir/DEBIAN
-        chmod -R 755 $install_dir/usr
+        create_controlfile $base_dir/prod
+        check_old_installation $base_dir/prod
+        chmod -R 755 $base_dir/prod/DEBIAN
+        chmod -R 755 $base_dir/prod/usr
+        rm $executable_path/$PACKAGE_NAME-$version.deb
+        dpkg-deb --build $base_dir/prod $executable_path/$PACKAGE_NAME-$version.deb
 
-        cp -r $install_dir/DEBIAN $prod_path/
-        chmod -R 755 $prod_path/DEBIAN
-        chmod -R 755 $prod_path/usr
-
-        dpkg-deb --build $prod_path $executable_path/evlua-$version.deb
-        ls -l $prod_path/usr/bin
-        dpkg-deb --build $install_dir $executable_path/evlua-dev-$version.deb
-        ls -l $install_dir/usr/bin
+        if [ -z "$2" ]; then
+            PACKAGE_NAME=$PACKAGE_NAME"-dev"
+            create_controlfile $base_dir/dev
+            check_old_installation $base_dir/dev
+            chmod -R 755 $base_dir/dev/DEBIAN
+            chmod -R 755 $base_dir/dev/usr
+            rm $executable_path/$PACKAGE_NAME-$version.deb
+            dpkg-deb --build $base_dir/dev $executable_path/$PACKAGE_NAME-$version.deb
+        fi
     fi
 }

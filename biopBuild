@@ -1,0 +1,334 @@
+#!/bin/bash
+
+production_mode=false
+MAINTAINER="support@tekenlight.com"
+DESCRIPTION="Biop build"
+
+print_env_usage() {
+    echo "  build env option(build type is mandatory):"
+    echo "  ========================================="
+    echo "  -p, -prod             this will run the build in production mode. which means the system will search for evlua installation before procceding"
+    echo "  -t, --build_type      accepted values are SUBSCRIBER, ADMIN, or XCHANGE"
+    echo "  -b, --base_path       specify the base dir to us. All directories/files will be installed inside this directory itself - defaulted to $HOME"
+    echo "  -v, --version         specify the release version of the package - defaulted to 0.0.1"
+    echo ""
+}
+
+print_git_usage() {
+    echo "  github creds(mandatory):"
+    echo "  ======================="
+    echo "  -u,  --username       github username to be used for cloning repo"
+    echo "  -at, --access_token   github access token to be used"
+    echo ""
+}
+
+print_lua_configs() {
+    echo "  lua configs(mandatory in developer mode):"
+    echo "  ========================================"
+    echo "  -cd, --install_dir    path where installation has taken place. It must contain the directory where custom usr exists"
+    echo "  -lp, --lua_path       path where lua files are present such as genmake.lua. It should be like /foo/bar/?.lua"
+    echo "  -lc, --lua_c_path     path where so files are present such as libbevnet.so. It should be like /foo/bar/?.so"
+    echo "  -ld, --ld_lib_path    path where ld library files are present."
+    echo ""
+}
+
+print_usage() {
+    echo " "
+    echo "options:"
+    print_env_usage
+    print_git_usage
+    print_lua_configs
+    echo "-h, -help               show brief help"
+    exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help)
+        print_usage
+        exit 0
+        ;;
+    -b | --base_path)
+        if [[ -z "$2" ]]; then
+            echo "Error: Base path requires an argument."
+            print_env_usage
+            exit 1
+        fi
+        base_path="$2"
+        shift 2
+        ;;
+    -t | --build_type)
+        if [[ -z "$2" ]]; then
+            echo "Error: Build type requires an argument."
+            print_env_usage
+            exit 1
+        fi
+        build_type="$2"
+        PACKAGE_NAME="biop-${build_type,,}"
+        shift 2
+        ;;
+    -u | --user_name)
+        if [[ -z "$2" ]]; then
+            echo "Error: Github username type requires an argument."
+            print_git_usage
+            exit 1
+        fi
+        GITHUB_USER_NAME="$2"
+        shift 2
+        ;;
+    -at | --access_token)
+        if [[ -z "$2" ]]; then
+            echo "Error: Github access token type requires an argument."
+            print_git_usage
+            exit 1
+        fi
+        GITHUB_ACCESS_TOKEN="$2"
+        shift 2
+        ;;
+    -cd | --install_dir)
+        if [[ -z "$2" ]]; then
+            echo "Error: Install directory type requires an argument."
+            print_lua_configs
+            exit 1
+        fi
+        install_dir="$2"
+        export INSTALL_DIRECTORY=$install_dir
+        export PATH="$INSTALL_DIRECTORY/usr/bin:$PATH"
+        shift 2
+        ;;
+    -lp | --lua_path)
+        if [[ -z "$2" ]]; then
+            echo "Error: Lua path type requires an argument."
+            print_lua_configs
+            exit 1
+        fi
+        lua_path="$2"
+        shift 2
+        ;;
+    -lc | --lua_c_path)
+        if [[ -z "$2" ]]; then
+            echo "Error: Lua c path type requires an argument."
+            print_lua_configs
+            exit 1
+        fi
+        lua_c_path="$2"
+        shift 2
+        ;;
+    -ld | --ld_lib_path)
+        if [[ -z "$2" ]]; then
+            echo "Error: Lua ld lib path type requires an argument."
+            print_lua_configs
+            exit 1
+        fi
+        ld_lib_path="$2"
+        shift 2
+        ;;
+    -v | --version)
+        if [[ -z "$2" ]]; then
+            echo "Error: version requires an argument."
+            print_env_usage
+            exit 1
+        fi
+        version="$2"
+        shift 2
+        ;;
+    -p | --prod)
+        production_mode=true
+        echo "running in production mode"
+        shift
+        ;;
+    *)
+        echo "Error: Unknown option: $1"
+        show_help
+        exit 1
+        ;;
+    esac
+done
+
+################# check build type ################
+function validate_build_type() {
+    if [[ "$build_type" != "SUBSCRIBER" && "$build_type" != "ADMIN" && "$build_type" != "XCHANGE" ]]; then
+        echo "Error: Invalid value for build type. Accepted values are SUBSCRIBER, ADMIN, or XCHANGE."
+        echo "options:"
+        print_env_usage
+        exit 1
+    fi
+    echo "building $build_type"
+}
+
+validate_build_type
+
+##################### platform ####################
+platform_name=$(uname -m)
+if [ "$platform_name" = "x86_64" ]; then
+    platform_name="amd64"
+fi
+
+if [ ! -v version ]; then
+    echo "version not set using default value 0.0.1"
+    version="0.0.1"
+fi
+
+#### check if evlua is already installed or not ####
+## on ubuntu
+if [ "$production_mode" = true ]; then
+    if [ "$(dpkg -l | grep -e evlua-dev)" = "" ]; then
+        echo "evlua-dev is not installed. Please install"
+        exit 1
+    else
+        export LUA_PATH="/usr/local/share/lua/5.3/?.lua;$LUA_PATH"
+        export LUA_CPATH="/usr/local/lib/lua/5.3/?.so;/usr/local/lib/?.so;$LUA_CPATH"
+        export LD_LIBRARY_PATH="/usr/local/lib;$LD_LIBRARY_PATH"
+    fi
+else
+    if [ -z "$install_dir" ]; then
+        echo "install dir is required"
+        echo "options:"
+        print_lua_configs
+        exit 1
+    fi
+    if [ -z "$lua_path" ]; then
+        echo "lua path is required"
+        echo "options:"
+        print_lua_configs
+        exit 1
+    else
+        export LUA_PATH="$lua_path;$LUA_PATH"
+    fi
+    if [ -z "$lua_c_path" ]; then
+        echo "lua c path is required"
+        echo "options:"
+        print_lua_configs
+        exit 1
+    else
+        export LUA_CPATH="$lua_c_path;$LUA_CPATH"
+    fi
+    if [ -z "$ld_lib_path" ]; then
+        echo "ld path is required"
+        echo "options:"
+        print_lua_configs
+        exit 1
+    else
+        export LD_LIBRARY_PATH="$ld_lib_path;$LD_LIBRARY_PATH"
+    fi
+    export PATH="$install_dir/../lua/bin:$install_dir/../luarocks/bin:$PATH"
+fi
+
+####################################################
+
+# # check if github params are in the environment
+if [ -z "$GITHUB_USER_NAME" ] || [ -z "$GITHUB_ACCESS_TOKEN" ]; then
+    echo "Please set the github credentails"
+    echo "options:"
+    print_git_usage
+    exit 1
+fi
+
+base_path=$base_path/biop
+
+echo "production mode:  $production_mode"
+echo "build type:       $build_type"
+echo "lua path:         $LUA_PATH"
+echo "lua c path:       $LUA_CPATH"
+echo "ld library path:  $LD_LIBRARY_PATH"
+echo "base path:        $base_path"
+
+# Init config file
+. ./.meta && source ./.functions
+
+################# set directories #################
+# build log directory
+log_dir=$base_path/logs
+rm -rf $log_dir
+mkdir -p $log_dir
+
+function clone_common_libraries() {
+    local common_dir=$base_path/common
+    echo "Cloning common libraries into $common_dir"
+    mkdir -p $common_dir
+    for repo_url in "${BIOP_COMMON_REPOS[@]}"; do
+        clone_repo $repo_url $common_dir
+    done
+}
+
+function clone_libraries() {
+    local dir=$base_path/$build_type
+    echo "Cloning $build_type libraries into $dir"
+    mkdir -p $dir
+    if [ "$build_type" = "SUBSCRIBER" ]; then
+        for repo_url in "${BIOP_SUBSCRIBER_REPOS[@]}"; do
+            echo "cloning $repo_url"
+            clone_repo $repo_url $dir
+        done
+    elif [ "$build_type" = "XCHANGE" ]; then
+        for repo_url in "${BIOP_XCHANGE_REPOS[@]}"; do
+            echo "cloning $repo_url"
+            clone_repo $repo_url $dir
+        done
+    elif [ "$build_type" = "ADMIN" ]; then
+        for repo_url in "${BIOP_ADMIN_REPOS[@]}"; do
+            echo "cloning $repo_url"
+            clone_repo $repo_url $dir
+        done
+    fi
+}
+
+function build_modules() {
+    rm -rf $HOME/.luarocks
+    # build all common
+    for module in "$base_path"/common/*; do
+        echo "Folder: $module"
+        local dir=$(echo "$module" | awk -F/ '{print $(NF)}')
+        echo "Directory name: $dir"
+        echo "========== Installing: $dir =========="
+        cd $module
+        if [ "$production_mode" = false ]; then
+            $install_dir/usr/bin/build
+            is_success
+            $install_dir/usr/bin/deploy local
+            is_success
+        else
+            build
+            is_success
+            deploy local
+            is_success
+        fi
+        echo "========== Done =========="
+    done
+
+    # build all specific
+    for module in "$base_path/$build_type"/*; do
+        echo "Folder: $module"
+        local dir=$(echo "$module" | awk -F/ '{print $(NF)}')
+        echo "Directory name: $dir"
+        echo "========== Installing: $dir =========="
+        cd $module
+        if [ "$production_mode" = false ]; then
+            $install_dir/usr/bin/build
+            is_success
+            $install_dir/usr/bin/deploy local
+            is_success
+        else
+            build
+            is_success
+            deploy local
+            is_success
+        fi
+        echo "========== Done =========="
+    done
+}
+
+function move_modules() {
+    install_dir=$base_path/installables
+    rm -rf $install_dir
+    mkdir -p $install_dir/usr
+
+    echo "moving binaries created for $build_type to $install_dir"
+    mv $HOME/.luarocks/* $install_dir/usr/
+}
+
+clone_common_libraries
+clone_libraries
+build_modules
+move_modules
+build_executable $base_path prod

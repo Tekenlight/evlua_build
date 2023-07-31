@@ -11,38 +11,70 @@ DESCRIPTION="EVLUA build"
 print_usage() {
     echo " "
     echo "options:"
-    echo "-h, -help             show brief help"
-    echo "-f, -fresh            install fresh"
-    echo "-b, -base_dir         specify the base dir to us. All directories/files will be installed inside this directory itself - defaulted to $HOME"
-    echo "-v, -version          specify the release version of the package - defaulted to 0.0.1"
-    echo "-lp, -lua_path        checks for lua instance in the path provided"
-    echo "-rp, -lua_rocks_path  checks for lua rocks instance in the path provided"
-    echo "-pp, -postgres_path   checks for postgres instance in the path provided"
+    echo "-h, --help             show brief help"
+    echo "-f, --fresh            install fresh"
+    echo "-b, --base_dir         specify the base dir to us. All directories/files will be installed inside this directory itself - defaulted to $HOME"
+    echo "-v, --version          specify the release version of the package - defaulted to 0.0.1"
+    echo "-lp, --lua_path        checks for lua instance in the path provided"
+    echo "-rp, --lua_rocks_path  checks for lua rocks instance in the path provided"
+    echo "-pp, --postgres_path   checks for postgres instance in the path provided"
     exit 0
 }
 
-while getopts lp:rp:pp:b:v:hf flag; do
-    case "${flag}" in
-    b | base_dir)
-        base_dir=${OPTARG}
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -b | --base_dir)
+        if [[ -z "$2" ]]; then
+            echo "Error: Base dir requires an argument."
+            print_usage
+            exit 1
+        fi
+        base_dir="$2"
+        shift 2
         ;;
-    v | version)
-        version=${OPTARG}
+    -v | --version)
+        if [[ -z "$2" ]]; then
+            echo "Error: version requires an argument."
+            print_env_usage
+            exit 1
+        fi
+        version="$2"
+        shift 2
         ;;
-    lp | lua_path)
-        lua_path=${OPTARG}
+    -lp | --lua_path)
+        if [[ -z "$2" ]]; then
+            echo "Error: lua path requires an argument."
+            print_env_usage
+            exit 1
+        fi
+        lua_path="$2"
+        shift 2
         ;;
-    rp | lua_rocks_path)
-        lua_rocks_path=${OPTARG}
+    -rp | --lua_rocks_path)
+        if [[ -z "$2" ]]; then
+            echo "Error: lua rocks path requires an argument."
+            print_env_usage
+            exit 1
+        fi
+        lua_rocks_path="$2"
+        shift 2
         ;;
-    pp | postgres_path)
-        postgres_path=${OPTARG}
+    -pp | --postgres_path)
+        if [[ -z "$2" ]]; then
+            echo "Error: postgres path requires an argument."
+            print_env_usage
+            exit 1
+        fi
+        postgres_path="$2"
+        shift 2
         ;;
-    h | help)
+    -h | --help)
         print_usage
+        exit 0
         ;;
-    f | fresh)
+    -f | --fresh)
         install_fresh=true
+        shift
         ;;
     *)
         echo "Unknown option: $1"
