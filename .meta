@@ -30,6 +30,7 @@ EVLUA_REPOS=(
   "https://github.com/Tekenlight/luaposix.git"
   "https://github.com/Tekenlight/Penlight.git"
   "https://github.com/Tekenlight/lua-uri.git"
+  "https://github.com/Tekenlight/lualogging"
   "https://github.com/Tekenlight/service_utils.git"
 )
 
