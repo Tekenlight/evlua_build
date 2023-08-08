@@ -34,7 +34,9 @@ function clone_repo() {
             git clone -b path_change $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
         elif [ "$REPO_URL" = "https://github.com/Tekenlightamit/evpoco.git" ]; then
             git clone -b build_changes $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
-        else
+        elif [ "$REPO_URL" = "https://github.com/Tekenlightamit/lualogging.git" ]; then
+            git clone -b logging $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
+	else
             git clone $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
         fi
     fi
