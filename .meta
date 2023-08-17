@@ -18,7 +18,7 @@ LUA_REPOS=(
 )
 
 # evpoco to be cloned
-EVPOCO="https://github.com/Tekenlightamit/evpoco.git"
+EVPOCO="https://github.com/Tekenlight/evpoco.git"
 
 # EVLUA repos to be cloned
 EVLUA_REPOS=(
