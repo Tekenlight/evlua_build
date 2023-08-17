@@ -27,12 +27,7 @@ function clone_repo() {
         git pull 2>&1 | tee $log_dir/git
     else
         mkdir -p $REPO_CLONE_DIRECTORY
-        # git clone $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
-        if [ "$REPO_URL" = "https://github.com/Tekenlight/lualogging.git" ]; then
-            git clone -b logging $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
-	    else
-            git clone $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
-        fi
+        git clone $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
     fi
     is_success
 }
