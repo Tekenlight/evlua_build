@@ -28,13 +28,7 @@ function clone_repo() {
     else
         mkdir -p $REPO_CLONE_DIRECTORY
         # git clone $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
-        # if [ "$REPO_URL" = "https://github.com/Tekenlight/service_utils.git" ]; then
-        #     git clone -b path_added_install_directory $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
-        # elif [ "$REPO_URL" = "https://github.com/Tekenlight/lua_schema.git" ]; then
-        #     git clone -b path_change $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
-        # elif [ "$REPO_URL" = "https://github.com/Tekenlightamit/evpoco.git" ]; then
-        #     git clone -b build_changes $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
-        elif [ "$REPO_URL" = "https://github.com/Tekenlight/lualogging.git" ]; then
+        if [ "$REPO_URL" = "https://github.com/Tekenlight/lualogging.git" ]; then
             git clone -b logging $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
 	    else
             git clone $REPO_URL $REPO_CLONE_DIRECTORY 2>&1 | tee $log_dir/git
