@@ -44,10 +44,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run:
-          gh release upload ${{ env.RELEASE_VERSION }} ${{ env.BINARY_DIR }}/evlua-dev-${{ env.RELEASE_VERSION }}.deb --repo="$GITHUB_REPOSITORY"
+          gh release upload v${{ env.RELEASE_VERSION }} ${{ env.BINARY_DIR }}/evlua-dev-${{ env.RELEASE_VERSION }}.deb --repo="$GITHUB_REPOSITORY"
       - name: Upload .deb file for prod
         id: upload_deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run:
-          gh release upload ${{ env.RELEASE_VERSION }} ${{ env.BINARY_DIR }}/evlua-${{ env.RELEASE_VERSION }}.deb --repo="$GITHUB_REPOSITORY"
+          gh release upload v${{ env.RELEASE_VERSION }} ${{ env.BINARY_DIR }}/evlua-${{ env.RELEASE_VERSION }}.deb --repo="$GITHUB_REPOSITORY"
