@@ -32,7 +32,7 @@ jobs:
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        notes: |
+          NOTES: |
           Release Notes for v${{ env.RELEASE_VERSION }}:
           - Binary to install evlua on to the machine.
           - Containes executable for both developer or prod users.
