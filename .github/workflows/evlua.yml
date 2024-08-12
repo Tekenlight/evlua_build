@@ -30,35 +30,23 @@ jobs:
       
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ env.RELEASE_VERSION }}
-          release_name: Release v${{ env.RELEASE_VERSION }}
-          body: |
-            Release Notes for v${{ env.RELEASE_VERSION }}:
-            - Binary to install evlua on to the machine.
-            - Containes executable for both developer or prod users.
+        run:
+          gh release create v${{ env.RELEASE_VERSION }} --notes 'Release Notes for v${{ env.RELEASE_VERSION }}:
+- Binary to install evlua on to the machine.
+- Containes executable for both developer or prod users.'
 
       - name: Upload .deb file for dev
         id: upload_dev_deb
-        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BINARY_DIR }}/evlua-dev-${{ env.RELEASE_VERSION }}.deb
-          asset_name: evlua-dev-${{ env.RELEASE_VERSION }}.deb
-          asset_content_type: application/x-deb
+        run:
+          gh release upload ${{ env.RELEASE_VERSION }} ${{ env.BINARY_DIR }}/evlua-dev-${{ env.RELEASE_VERSION }}.deb
       
       - name: Upload .deb file for prod
         id: upload_deb
-        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BINARY_DIR }}/evlua-${{ env.RELEASE_VERSION }}.deb
-          asset_name: evlua-${{ env.RELEASE_VERSION }}.deb
-          asset_content_type: application/x-deb
+        run:
+          gh release upload ${{ env.RELEASE_VERSION }} ${{ env.BINARY_DIR }}/evlua-${{ env.RELEASE_VERSION }}.deb
