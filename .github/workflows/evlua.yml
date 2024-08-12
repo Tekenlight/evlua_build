@@ -37,7 +37,7 @@ jobs:
             - Binary to install evlua on to the machine.
             - Containes executable for both developer or prod users.
         run:
-          gh release create v${{ env.RELEASE_VERSION }} --notes ${{ ENV.NOTES }}
+          gh release create v${{ env.RELEASE_VERSION }} --notes "${{ ENV.NOTES }}"
 
       - name: Upload .deb file for dev
         id: upload_dev_deb
