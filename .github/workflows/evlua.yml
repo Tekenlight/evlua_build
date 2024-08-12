@@ -32,12 +32,12 @@ jobs:
         id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NOTES: |
-            Release Notes for v${{ env.RELEASE_VERSION }}:
-            - Binary to install evlua on to the machine.
-            - Containes executable for both developer or prod users.
-        run:
-          gh release create v${{ env.RELEASE_VERSION }} --notes "${{ ENV.NOTES }}"
+        run: |
+          echo "Release Notes for v${{ env.RELEASE_VERSION }}:" >> release_notes.md
+          echo "- Binary to install evlua on to the machine." >> release_notes.md
+          echo "- Containes executable for both developer or prod users." >> release_notes.md
+          gh release create v${{ env.RELEASE_VERSION }} -F release_notes.md
+          rm -f release_notes.md
 
       - name: Upload .deb file for dev
         id: upload_dev_deb
